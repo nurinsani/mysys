@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Exports\PpapExport;
-use App\Models\Menu;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -11,12 +10,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportPpapController extends Controller
+class ReportPpapController extends BaseController
 {
     public function index()
     {
         $title = 'Report PPAP';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         return view('admin.report_ppap.index', compact('menus', 'title'));
     }
@@ -72,7 +71,6 @@ class ReportPpapController extends Controller
         // filter berdasarkan jenis kolektibilitas berdasarkan FT (Frekuensi Tunggakan)
         switch($jenisKolek) {
             case 'semua':
-                // tampilkan semua
                 break;
             case 'lancar':
                 $tunggakan->havingRaw('ft BETWEEN 1 AND 3');
@@ -81,7 +79,7 @@ class ReportPpapController extends Controller
                 $tunggakan->havingRaw('ft BETWEEN 4 AND 6');
                 break;
             case 'diragukan':
-                $tunggakan->havingRaw('ft BETWEEN 7 AND 12');
+                $tunggakan->havingRaw('ft BETWEEN 7 AND 11');
                 break;
             case 'macet':
                 $tunggakan->havingRaw('ft >= 12');
@@ -152,7 +150,6 @@ class ReportPpapController extends Controller
 
         switch($jenisKolek) {
             case 'semua':
-                // tampilkan semua
                 break;
             case 'lancar':
                 $tunggakan->havingRaw('ft BETWEEN 1 AND 3');
@@ -161,7 +158,7 @@ class ReportPpapController extends Controller
                 $tunggakan->havingRaw('ft BETWEEN 4 AND 6');
                 break;
             case 'diragukan':
-                $tunggakan->havingRaw('ft BETWEEN 7 AND 12');
+                $tunggakan->havingRaw('ft BETWEEN 7 AND 11');
                 break;
             case 'macet':
                 $tunggakan->havingRaw('ft >= 12');
@@ -170,15 +167,13 @@ class ReportPpapController extends Controller
 
         $data = $tunggakan->get();
 
-        //kelompokkan data berdasarkan kategori kolektibilitas
         $dataKolektibilitas = [
             'lancar' => $data->filter(fn($item) => $item->ft >= 1 && $item->ft <= 3),
             'kurang_lancar' => $data->filter(fn($item) => $item->ft >= 4 && $item->ft <= 6),
-            'diragukan' => $data->filter(fn($item) => $item->ft >= 7 && $item->ft <= 12),
+            'diragukan' => $data->filter(fn($item) => $item->ft >= 7 && $item->ft <= 11),
             'macet' => $data->filter(fn($item) => $item->ft >= 12),
         ];
 
-        // hitung summary per kategori
         $summary = [
             'lancar' => [
                 'jumlah_debitur' => $dataKolektibilitas['lancar']->count(),
@@ -206,7 +201,6 @@ class ReportPpapController extends Controller
             ],
         ];
 
-        // Hitung total
         $total = [
             'jumlah_debitur' => array_sum(array_column($summary, 'jumlah_debitur')),
             'plafond' => array_sum(array_column($summary, 'plafond')),
@@ -214,7 +208,6 @@ class ReportPpapController extends Controller
             'ppap' => array_sum(array_column($summary, 'ppap')),
         ];
 
-        //mengambil info branch
         $branch = DB::table('branch')->where('kode_branch', $unit)->first();
 
         $pdf = Pdf::loadView('admin.report_ppap.pdf', [
@@ -286,10 +279,8 @@ class ReportPpapController extends Controller
             )
             ->havingRaw('total_tunggakan > 0');
 
-        // Filter berdasarkan jenis kolektibilitas
         switch($jenisKolek) {
             case 'semua':
-                // tampilkan semua
                 break;
             case 'lancar':
                 $tunggakan->havingRaw('ft BETWEEN 1 AND 3');
@@ -298,7 +289,7 @@ class ReportPpapController extends Controller
                 $tunggakan->havingRaw('ft BETWEEN 4 AND 6');
                 break;
             case 'diragukan':
-                $tunggakan->havingRaw('ft BETWEEN 7 AND 12');
+                $tunggakan->havingRaw('ft BETWEEN 7 AND 11');
                 break;
             case 'macet':
                 $tunggakan->havingRaw('ft >= 12');
@@ -307,11 +298,10 @@ class ReportPpapController extends Controller
 
         $data = $tunggakan->get();
 
-        // Kelompokkan data berdasarkan kategori kolektibilitas
         $dataKolektibilitas = [
             'lancar' => $data->filter(fn($item) => $item->ft >= 1 && $item->ft <= 3),
             'kurang_lancar' => $data->filter(fn($item) => $item->ft >= 4 && $item->ft <= 6),
-            'diragukan' => $data->filter(fn($item) => $item->ft >= 7 && $item->ft <= 12),
+            'diragukan' => $data->filter(fn($item) => $item->ft >= 7 && $item->ft <= 11),
             'macet' => $data->filter(fn($item) => $item->ft >= 12),
         ];
 

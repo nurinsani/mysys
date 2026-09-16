@@ -2,19 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Http\Requests\Pembiayaan\AddPembiayaanRequest;
+use App\Repositories\Contracts\KelompokRepositoryInterface;
 
-class PembiayaanController extends Controller
+class PembiayaanController extends BaseController
 {
+    public function __construct(
+        protected KelompokRepositoryInterface $kelompokRepository
+    ) {
+    }
+
     public function index()
     {
         $title = 'Master Pembiayaan';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.master_pembiayaan.index', compact('title', 'menus'));
+    }
+
+    public function cariKelompok(Request $request)
+    {
+        $results = $this->kelompokRepository->search($request->cari, Auth::user()->unit, 10);
+
+        return response()->json($results);
     }
 
     public function data(Request $request)
@@ -23,10 +37,29 @@ class PembiayaanController extends Controller
             $kodeKelompok = $request->get('kode_kelompok');
 
             if (!$kodeKelompok) {
+                $pending = DB::table('temp_akad_mus')
+                    ->leftJoin('kelompok', 'temp_akad_mus.code_kel', '=', 'kelompok.code_kel')
+                    ->where('temp_akad_mus.unit', Auth::user()->unit)
+                    ->select(
+                        'kelompok.nama_kel as nama_kelompok',
+                        'temp_akad_mus.code_kel as kode_kel',
+                        'temp_akad_mus.no_anggota as no_anggota',
+                        'temp_akad_mus.unit as unit_anggota',
+                        'temp_akad_mus.cao as anggota_cao',
+                        'temp_akad_mus.cif as anggota_cif',
+                        'temp_akad_mus.nama as nama_anggota',
+                        'temp_akad_mus.suffix as suffix',
+                        'temp_akad_mus.plafond as plafond',
+                        'temp_akad_mus.os as os',
+                        'temp_akad_mus.tenor as tenor'
+                    )
+                    ->latest('temp_akad_mus.created_at')
+                    ->get();
+
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Kode Kelompok is required'
-                ], 400);
+                    'status' => 'success',
+                    'data' => $pending
+                ]);
             }
 
             $anggota = DB::table('anggota')
@@ -74,16 +107,14 @@ class PembiayaanController extends Controller
     public function edit($cif)
     {
         $title = 'Edit Pembiayaan';
-        $menus = Menu::whereNull('parent_id')
-            ->with('children')
-            ->orderBy('order')
-            ->get();
+        $menus = $this->getMenus();
 
         $pembiayaan = DB::table('anggota')
             ->leftJoin('kelompok', 'anggota.kode_kel', '=', 'kelompok.code_kel')
             ->leftJoin('pembiayaan', 'anggota.cif', '=', 'pembiayaan.cif')
             ->leftJoin('anggota_details', 'anggota.no', '=', 'anggota_details.no_anggota')
             ->where('anggota.cif', $cif)
+            ->where('anggota.unit', Auth::user()->unit)
             ->select(
                 'kelompok.nama_kel as nama_kelompok',
                 'anggota.kode_kel',
@@ -130,13 +161,9 @@ class PembiayaanController extends Controller
                 ->with('error', 'Data pembiayaan tidak ditemukan');
         }
 
-        // ============================
-        // LOGIC PEMBIAYAAN LANJUTAN
-        // ============================
         $omzetMusyarakah = null;
 
         if ($pembiayaan->os > 0) {
-            // ambil omzet TERKECIL berdasarkan CIF
             $omzetMusyarakah = DB::table('omzet')
                 ->where('cif', $cif)
                 ->min('nominal');
@@ -146,32 +173,15 @@ class PembiayaanController extends Controller
     }
 
 
-    public function addPembiayaan(Request $request)
+    public function addPembiayaan(AddPembiayaanRequest $request)
     {
-        $validated = $request->validate([
-            'unit' => 'required|string',
-            'jenis_pembiayaan' => 'required|integer',
-            'no_rek' => 'required|string',
-            'cif' => 'required|string',
-            'pengajuan' => 'required|integer',
-            'tenor' => 'required|integer',
-            'disetujui' => 'required|integer',
-            'tgl_wakalah' => 'required|date',
-            'tgl_akad' => 'required|date',
-            'bidang_usaha' => 'required|string',
-            'keterangan_usaha' => 'required|string',
-            'id' => 'required|integer',
-            'param_tanggal' => 'required|date',
-            'cao' => 'required|string',
-            'kode_kel' => 'required|string',
-            'nama' => 'required|string',
-            'tgl_lahir' => 'required|date',
-            'omzet' => 'nullable|numeric|min:1'
-        ]);
+        $validated = $request->validated();
+        $unit = Auth::user()->unit;
+        $userId = Auth::id();
+        $jenisPembiayaan = (int) $validated['jenis_pembiayaan'];
 
         try {
 
-            // hitung suffix
             $lastSuffix = DB::table('temp_akad_mus')
                 ->where('cif', $validated['cif'])
                 ->max('suffix');
@@ -189,7 +199,7 @@ class PembiayaanController extends Controller
             if ($existingRecord) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => $existingRecord->unit !== $validated['unit']
+                    'message' => $existingRecord->unit !== $unit
                         ? 'NIK / CIF already used in another unit'
                         : 'Record already exist'
                 ], 400);
@@ -218,7 +228,7 @@ class PembiayaanController extends Controller
             // ================================
             // JIKA AKAD MUSYARAKAH
             // ================================
-            if ((int) $validated['jenis_pembiayaan'] === 2) {
+            if ($jenisPembiayaan === 2) {
 
                 if (empty($validated['omzet'])) {
                     return response()->json([
@@ -236,7 +246,6 @@ class PembiayaanController extends Controller
                     ], 400);
                 }
 
-                // cek pembiayaan lanjutan
                 $isPembiayaanLanjutan = DB::table('pembiayaan')
                     ->where('cif', $validated['cif'])
                     ->where('os', '>', 0)
@@ -251,10 +260,8 @@ class PembiayaanController extends Controller
                     ], 400);
                 }
 
-                // hitung persen margin musyarokah
                 $persenMarginMusyarokah = round(($ijaroh / $basisOmzet) * 100, 2);
 
-                // simpan data omzet
                 if (!$isPembiayaanLanjutan) {
                     DB::table('omzet')->insert([
                         'tanggal' => now()->toDateString(),
@@ -277,17 +284,14 @@ class PembiayaanController extends Controller
 
             $dayOfWeek = $wakalahDate->locale('id')->isoFormat('dddd');
 
-            // validasi usia
             $age = Carbon::parse($validated['tgl_lahir'])->age;
             $statusUsia = $age > 50 ? 'DEVIASI' : 'NO';
 
-            // ambil tanggal libur
             $tanggalLibur = DB::table('param_tgl')->pluck('param_tgl')->toArray();
 
             $tglMurab = $wakalahDate->copy()->addDays(7);
             $current  = $tglMurab->copy()->addDays(7);
 
-            // jadwal angsuran
             $jadwal = [];
 
             for ($i = 0; $i < $validated['tenor']; $i++) {
@@ -317,7 +321,7 @@ class PembiayaanController extends Controller
                 'tenor' => $validated['tenor'],
                 'plafond' => $validated['disetujui'],
                 'os' => $outStanding,
-                'saldo_margin' => $validated['jenis_pembiayaan'] == 2 ? '0' : $saldoMargin,
+                'saldo_margin' => $jenisPembiayaan === 2 ? '0' : $saldoMargin,
                 'angsuran' => $angsuran,
                 'pokok' => $pokok,
                 'ijaroh' => $ijaroh,
@@ -326,7 +330,7 @@ class PembiayaanController extends Controller
                 'ke' => 1,
                 'usaha' => $validated['bidang_usaha'],
                 'nama_usaha' => $validated['keterangan_usaha'],
-                'unit' => $validated['unit'],
+                'unit' => $unit,
                 'tgl_wakalah' => $wakalahDate,
                 'tgl_akad' => Carbon::parse($validated['tgl_akad']),
                 'tgl_murab' => $tglMurab,
@@ -335,13 +339,13 @@ class PembiayaanController extends Controller
                 'last_payment' => null,
                 'hari' => $dayOfWeek,
                 'cao' => $validated['cao'],
-                'userid' => (int) $validated['id'],
+                'userid' => $userId,
                 'status' => 'ANGGOTA',
                 'status_usia' => $statusUsia,
                 'status_app' => 'APPROVE',
                 'gol' => 1,
-                'deal_produk' => $validated['jenis_pembiayaan'] == 2 ? '3' : $validated['jenis_pembiayaan'],
-                'persen_margin' => $validated['jenis_pembiayaan'] == 2 ? $persenMarginMusyarokah : $persenMargin,
+                'deal_produk' => $jenisPembiayaan === 2 ? '3' : $jenisPembiayaan,
+                'persen_margin' => $jenisPembiayaan === 2 ? $persenMarginMusyarokah : $persenMargin,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -361,7 +365,7 @@ class PembiayaanController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => $e->getMessage()
+                'message' => 'Terjadi kesalahan saat menyimpan pembiayaan. Silakan coba lagi atau hubungi admin.'
             ], 500);
         }
     }

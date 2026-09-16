@@ -280,23 +280,46 @@
 
                         <div class="col-md-6">
                             <div class="form-group row">
+                                <span class="col-sm-4 col-form-label">Jenis Kelamin <span
+                                        class="text-danger">*</span></span>
+                                <div class="col-sm-7">
+                                    <select name="kelamin" id="kelamin" class="form-control @error('kelamin') is-invalid @enderror">
+                                        <option hidden value="">-- PILIH JENIS KELAMIN --</option>
+                                        <option value="L"
+                                        @if ($anggota->kelamin == 'L')
+                                            selected
+                                        @endif
+                                        >LAKI-LAKI</option>
+                                        <option value="P"
+                                        @if ($anggota->kelamin == 'P')
+                                            selected
+                                        @endif
+                                        >PEREMPUAN</option>
+                                    </select>
+                                    @error('kelamin')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
                                 <span class="col-sm-4 col-form-label">Status Perkawinan <span
                                         class="text-danger">*</span></span>
                                 <div class="col-sm-7">
                                     <select name="status_menikah" id="status_menikah" class="form-control @error('status_menikah') is-invalid @enderror">
                                         <option hidden value="">-- PILIH STATUS PERKAWINAN --</option>
                                         <option value="MENIKAH"
-                                        @if ($anggota->status_menikah = 'MENIKAH')
+                                        @if ($anggota->status_menikah == 'MENIKAH')
                                             selected
                                         @endif
                                         >MENIKAH</option>
                                         <option value="BELUM MENIKAH"
-                                        @if ($anggota->status_menikah = 'BELUM MENIKAH')
+                                        @if ($anggota->status_menikah == 'BELUM MENIKAH')
                                             selected
                                         @endif
                                         >BELUM MENIKAH</option>
                                         <option value="JANDA"
-                                        @if ($anggota->status_menikah = 'JANDA')
+                                        @if ($anggota->status_menikah == 'JANDA')
                                             selected
                                         @endif
                                         >JANDA</option>
@@ -313,27 +336,27 @@
                                     <select name="agama" id="agama" class="form-control @error('agama') is-invalid @enderror">
                                         <option hidden value="">-- PILIH AGAMA --</option>
                                         <option value="ISLAM"
-                                        @if ($anggota->agama = 'ISLAM')
+                                        @if ($anggota->agama == 'ISLAM')
                                             selected
                                         @endif
                                         >ISLAM</option>
                                         <option value="KRISTEN"
-                                        @if ($anggota->agama = 'KRISTEN')
+                                        @if ($anggota->agama == 'KRISTEN')
                                             selected
                                         @endif
                                         >KRISTEN</option>
                                         <option value="HINDU"
-                                        @if ($anggota->agama = 'HINDU')
+                                        @if ($anggota->agama == 'HINDU')
                                                     selected
                                                 @endif
                                         >HINDU</option>
                                         <option value="BUDDHA"
-                                        @if ($anggota->agama = 'BUDDHA')
+                                        @if ($anggota->agama == 'BUDDHA')
                                             selected
                                         @endif
                                         >BUDDHA</option>
                                         <option value="KONGHUCU"
-                                        @if ($anggota->agama = 'KONGHUCU')
+                                        @if ($anggota->agama == 'KONGHUCU')
                                             selected
                                         @endif
                                         >KONGHUCU</option>
@@ -351,17 +374,17 @@
                                     <select name="pendidikan" id="pendidikan" class="form-control @error('pendidikan') is-invalid @enderror">
                                         <option hidden value="">-- PILIH PENDIDIKAN --</option>
                                         <option value="SD"
-                                        @if ($anggota->pendidikan = 'SD')
+                                        @if ($anggota->pendidikan == 'SD')
                                             selected
                                         @endif
                                         >SD</option>
                                         <option value="SMP"
-                                        @if ($anggota->pendidikan = 'SMP')
+                                        @if ($anggota->pendidikan == 'SMP')
                                             selected
                                         @endif
                                         >SMP</option>
                                         <option value="SMA"
-                                        @if ($anggota->pendidikan = 'SMA')
+                                        @if ($anggota->pendidikan == 'SMA')
                                             selected
                                         @endif
                                         >SMA</option>

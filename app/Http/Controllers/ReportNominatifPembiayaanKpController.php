@@ -4,28 +4,18 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Exports\PembiayaanExport;
-use App\Models\Menu;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 
-class ReportNominatifPembiayaanKpController extends Controller
+class ReportNominatifPembiayaanKpController extends BaseController
 {
      public function index()
     {
         $title = 'Report Nominative Pembiayaan';
-           $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-            ->where(function ($q) use ($roleId) {
-                $q->where('role_id', $roleId)->orWhereNull('role_id');
-            })
-            ->with(['children' => function ($q) use ($roleId) {
-                $q->where('role_id', $roleId)->orWhereNull('role_id');
-            }])
-            ->orderBy('order')
-            ->get();
+           $menus = $this->getMenus();
 
         return view('kp.report_nominative_pembiayaan.index', compact('menus', 'title'));
     }
@@ -84,7 +74,6 @@ class ReportNominatifPembiayaanKpController extends Controller
 
         $data = $query->get();
 
-        // Debug: Log hasil
         Log::info('Query Result', [
             'count' => $data->count(),
             'data' => $data

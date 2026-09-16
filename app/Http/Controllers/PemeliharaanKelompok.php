@@ -5,17 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Anggota;
 use App\Models\ao;
 use App\Models\Kelompok;
-use App\Models\Menu;
 use App\Models\pembiayaan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class PemeliharaanKelompok extends Controller
+class PemeliharaanKelompok extends BaseController
 {
     public function data()
     {
-        // $kelompok = DB::table('kelompok')->latest()->get();
-
         $kelompok = DB::table('kelompok')
         ->join('pembiayaan', 'kelompok.code_kel', '=', 'pembiayaan.code_kel')
         ->select(
@@ -38,7 +35,7 @@ class PemeliharaanKelompok extends Controller
     public function index()
     {
         $title = 'Pemeliharaan Kelompok';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $ao = ao::all();
         $anggota = Anggota::all();
         return view('admin.pemeliharaan_kelompok.index', compact('menus', 'title', 'ao', 'anggota'));

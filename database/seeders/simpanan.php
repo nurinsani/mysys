@@ -14,7 +14,7 @@ class simpanan extends Seeder
     {
         DB::table('simpanan')->insert([
             [
-                'reff' => 'REF001',
+                'reff' => generate_reff('001'),
                 'buss_date' => now()->subMonth(),
                 'norek' => '00108612001',
                 'unit' => '001',
@@ -33,7 +33,7 @@ class simpanan extends Seeder
                 'updated_at' => now()->subMonth(),
             ],
             [
-                'reff' => 'REF002',
+                'reff' => generate_reff('001'),
                 'buss_date' => now(),
                 'norek' => '00108612001',
                 'unit' => '001',

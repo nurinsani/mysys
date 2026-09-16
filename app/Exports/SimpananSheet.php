@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\simpanan;
-// use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -14,9 +13,6 @@ use Carbon\Carbon;
 
 class SimpananSheet implements FromCollection, WithTitle, WithHeadings, WithStyles
 {
-    /**
-     * @return \Illuminate\Support\Collection
-     */
     protected $status;
     protected $bulan;
     protected $tahun;
@@ -54,11 +50,9 @@ class SimpananSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
 
         $tahun = $this->tahun ?? Carbon::now()->year;
 
-        // start dan end date berdasarkan pilihan bulan & tahun
         $startDate = Carbon::createFromDate($tahun, $bulanAngka, 1)->startOfMonth()->toDateString();
         $endDate   = Carbon::createFromDate($tahun, $bulanAngka, 1)->endOfMonth()->toDateString();
 
-        // cari rentang bulan lalu
         $startThisMonth = Carbon::now()->startOfMonth()->toDateString();
         $endThisMonth   = Carbon::now()->endOfMonth()->toDateString();
 
@@ -68,8 +62,6 @@ class SimpananSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
             ")
             ->whereNotBetween('simpanan.buss_date', [$startThisMonth, $endThisMonth])
             ->value('saldo_awal');
-
-        // dd($saldoAwal);
 
         $query = DB::table('simpanan')
             ->leftJoin('anggota', 'simpanan.norek', '=', 'anggota.no')
@@ -153,11 +145,11 @@ class SimpananSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
             1 => [
                 'font' => [
                     'bold' => true,
-                    'color' => ['argb' => 'FFFFFFFF'] // white text
+                    'color' => ['argb' => 'FFFFFFFF']
                 ],
                 'fill' => [
                     'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'FF008000'] // green
+                    'startColor' => ['argb' => 'FF008000']
                 ],
                 'alignment' => [
                     'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER

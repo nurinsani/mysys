@@ -44,11 +44,8 @@
 
                     <div class="form-group">
                         <label>CIF Ketua</label>
-                        <select name="cif" id="cif" class="form-control select2" required>
+                        <select name="cif" id="cif" class="form-control select2-ajax-cif" style="width: 100%;" required>
                             <option hidden value="">-- Pilih CIF Ketua --</option>
-                            @foreach ($anggota as $item)
-                                <option value="{{ $item->cif }}" data-no-tlp="{{ $item->no_hp }}">{{ $item->cif }} - {{ $item->nama }} - {{ $item->no_hp }}</option>
-                            @endforeach
                         </select>
                         <span class="help-block with-errors text-danger"></span>
                     </div>

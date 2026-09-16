@@ -3,17 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\GenericExport;
 
-class ExportMobcolController extends Controller
+class ExportMobcolController extends BaseController
 {
     public function index()
     {
         $title = 'Transaksi CS Mobile';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         return view('admin.transaksi_cs.index', compact('title', 'menus'));
     }

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'mobcol' => [
+        // Sudah pernah pindah server sekali (lihat riwayat rencana_pengerjaan.md,
+        // endpoint pull mobcol) — sengaja ditaruh di .env, bukan hardcode di controller.
+        'ktp_url' => env('MOBCOL_KTP_URL', 'http://mobcoll.nurinsani.co.id/apimobcol/rmcKtp.php'),
+    ],
+
 ];

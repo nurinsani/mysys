@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class ReportArusKasController extends Controller
+class ReportArusKasController extends BaseController
 {
     private function getKategori(): array
     {
@@ -31,7 +30,7 @@ class ReportArusKasController extends Controller
     public function index()
     {
         $title = 'Laporan Arus Kas';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $unit = Auth::user()->unit;
 
         $rows = DB::table('tabel_master_kas')
@@ -177,7 +176,7 @@ class ReportArusKasController extends Controller
             ->keyBy('code_arus_kas');
 
         $title = 'Laporan Arus Kas';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         return view('admin.report_arus_kas.index', [
             'title' => $title,

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kelompok;
-use App\Models\Menu;
 use App\Models\simpanan;
 use App\Models\simpanan_pokok;
 use App\Models\simpanan_wajib;
@@ -11,13 +10,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Repositories\Contracts\KelompokRepositoryInterface;
 
-class PemindahbukuanPerkelompokController extends Controller
+class PemindahbukuanPerkelompokController extends BaseController
 {
+    public function __construct(protected KelompokRepositoryInterface $kelompokRepository)
+    {
+    }
+
     public function index ()
     {
         $title = 'PB Perkelompok';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.pemindahbukuan_perkelompok.index', compact('title', 'menus'));
     }
 
@@ -25,15 +29,7 @@ class PemindahbukuanPerkelompokController extends Controller
     {
         $cari = $request->input('cari');
 
-        $results = DB::table('kelompok')
-            ->select('code_kel', 'nama_kel')
-            ->where('code_unit', Auth::user()->unit)
-            ->where(function ($query) use ($cari) {
-                $query->where('code_kel', 'like', '%' . $cari . '%')
-                    ->orWhere('nama_kel', 'like', '%' . $cari . '%');
-            })
-            ->limit(10)
-            ->get();
+        $results = $this->kelompokRepository->search($cari, Auth::user()->unit, 10);
 
         return response()->json($results);
     }
@@ -42,7 +38,6 @@ class PemindahbukuanPerkelompokController extends Controller
     {
         $code_kel = $request->input('code_kel');
 
-        // Data kelompok
         $get_kelompok = DB::table('kelompok')
             ->where('code_kel', $code_kel)
             ->first();
@@ -51,13 +46,11 @@ class PemindahbukuanPerkelompokController extends Controller
             return response()->json(['message' => 'Kamu belum pilih kelompok'], 404);
         }
 
-        // Data anggota
         $get_anggota = DB::table('anggota')
             ->join('pembiayaan', 'anggota.no', '=', 'pembiayaan.no_anggota')
             ->leftJoin(DB::raw("(SELECT norek, SUM(kredit) - SUM(debet) AS saldo_pokok FROM simpanan_pokok GROUP BY norek) as spokok"), 'anggota.norek', '=', 'spokok.norek')
             ->leftJoin(DB::raw("(SELECT norek, SUM(kredit) - SUM(debet) AS saldo_wajib FROM simpanan_wajib GROUP BY norek) as swajib"), 'anggota.norek', '=', 'swajib.norek')
             ->where('pembiayaan.code_kel', $code_kel)
-            // ->where('pembiayaan.run_tenor', '<', DB::raw('pembiayaan.tenor')) // anggota yang masih memiliki angsuran
             ->select(
                 'anggota.*',
                 'pembiayaan.*',
@@ -77,7 +70,6 @@ class PemindahbukuanPerkelompokController extends Controller
         DB::beginTransaction();
         try {
 
-            // Validasi kelompok
             $kelompok = DB::table('pembiayaan')
                 ->where('code_kel', $code_kel)
                 ->first();
@@ -86,18 +78,15 @@ class PemindahbukuanPerkelompokController extends Controller
                 return response()->json(['message' => 'Kelompok tidak ditemukan'], 404);
             }
 
-            // Ambil data anggota yang dipilih dari request
             $pilihAnggota = request()->input('pilih_anggota', []);
             $nominalPB = request()->input('input_nyata_setor', []);
             $jenisPemindahan = request()->input('jenis_pemindahan');
             $jenisSimpanan = request()->input('jenis_simpanan');
 
-            // Jika tidak ada anggota yang dipilih
             if (empty($pilihAnggota)) {
                 return response()->json(['message' => 'Tidak ada anggota yang dipilih'], 400);
             }
 
-            // Ambil data PB anggota yang dipilih
             $pb = DB::table('pembiayaan')
                 ->join('anggota', 'pembiayaan.no_anggota', '=', 'anggota.no')
                 ->where('code_kel', $code_kel)
@@ -108,7 +97,6 @@ class PemindahbukuanPerkelompokController extends Controller
                 )
                 ->get();
 
-            // Proses update untuk setiap anggota yang dipilih
             foreach ($pb as $item) {
                 $nominalPB[$item->no_anggota] ?? $item->bulat;
                 $jenisPemindahan = request()->input('jenis_pemindahan');
@@ -120,8 +108,7 @@ class PemindahbukuanPerkelompokController extends Controller
                 $tgl_system = now()->format('Y-m-d H:i:s');
                 $user_id = Auth::user()->id;
                 $ket = 'Setoran PB an ' . $item->nama;
-                $timestamp = date('YmdHis');
-                $reff = $unit . $timestamp . strtoupper(Str::random(2));
+                $reff = generate_reff($unit);
                 
                 $nominal = isset($nominalPB[$item->no_anggota]) ? floatval($nominalPB[$item->no_anggota]) : 0;
                 
@@ -130,7 +117,6 @@ class PemindahbukuanPerkelompokController extends Controller
                     continue;
                 }
                 
-                // Cek kondisi untuk debet pokok
                 if ($jenisPemindahan === 'debet' && $jenisSimpanan === 'pokok') {
                     simpanan::create([
                         'reff' => $reff,
@@ -180,7 +166,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => 'Post',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -193,7 +180,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => $nominal,
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => 'Post',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                             ]
                         ];
 
@@ -248,7 +236,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -261,7 +250,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => $nominal,
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
 
@@ -317,7 +307,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -330,7 +321,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => $nominal,
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
 
@@ -385,7 +377,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -398,7 +391,8 @@ class PemindahbukuanPerkelompokController extends Controller
                             'kredit' => $nominal,
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $user_id
+                            'id_admin' => $user_id,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
 

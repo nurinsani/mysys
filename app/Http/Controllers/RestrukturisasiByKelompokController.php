@@ -3,15 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class RestrukturisasiByKelompokController extends Controller
+class RestrukturisasiByKelompokController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Restrukturisasi By Kelompok';
 
         return view("admin.restrukturisasi_by_kelompok.index", compact("menus", "title"));
@@ -99,7 +98,6 @@ class RestrukturisasiByKelompokController extends Controller
         DB::beginTransaction();
         try {
             foreach ($pembiayaanList as $akad) {
-                // Calculate angsuran baru
                 $os = (float) $akad->os;
                 $saldo_margin = (float) $akad->saldo_margin;
                 $cif = $akad->cif;
@@ -142,7 +140,6 @@ class RestrukturisasiByKelompokController extends Controller
 
                 $angsuran_baru = $tenor > 0 ? $total_restrukturisasi / $tenor : 0;
 
-                // Get last payment info
                 $lastPayment = DB::table('pembiayaan_detail')
                     ->where('cif', $cif)
                     ->where('unit', $unit)
@@ -163,7 +160,6 @@ class RestrukturisasiByKelompokController extends Controller
                     $adjustedTglJatuhTempo[] = $date->format('Y-m-d H:i:s');
                 }
 
-                // Update pembiayaan.os if simpanan dipakai
                 if ($simpanan_dipakai && $pokok_sesudah_simpanan !== null) {
                     DB::table('pembiayaan')
                         ->where('cif', $cif)
@@ -190,7 +186,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => 0,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'id_transaksi' => null,
@@ -204,7 +201,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => $saldo_margin,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'id_transaksi' => null,
@@ -218,7 +216,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => 0,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'id_transaksi' => null,
@@ -232,7 +231,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => $pokok + $saldo_margin,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
                 } else {
@@ -249,7 +249,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => 0,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'id_transaksi' => null,
@@ -263,7 +264,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => 0,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'id_transaksi' => null,
@@ -277,7 +279,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => 0,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'id_transaksi' => null,
@@ -291,7 +294,8 @@ class RestrukturisasiByKelompokController extends Controller
                             'kredit' => $pokok + $saldo_margin,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $id_admin
+                            'id_admin' => $id_admin,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
                 }
@@ -334,9 +338,7 @@ class RestrukturisasiByKelompokController extends Controller
                         'updated_at' => now()
                     ]);
                 }
-                // Delete tunggakan for this cif
                 DB::table('tunggakan')->where('cif', $cif)->delete();
-                // Insert to history_rest
                 DB::table('history_rest')->insert([
                     'tgl_rest' => now()->format('Y-m-d'),
                     'code_kel' => $akad->code_kel,

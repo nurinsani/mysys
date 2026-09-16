@@ -153,6 +153,35 @@
         });
 
         $(document).ready(function() {
+            $('.select2-ajax-cif').select2({
+                dropdownParent: $('#modal-form'),
+                placeholder: '-- Pilih CIF Ketua --',
+                minimumInputLength: 3,
+                ajax: {
+                    url: "{{ route('anggota.cari') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            cari: params.term
+                        };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: $.map(data, function(item) {
+                                return {
+                                    id: item.cif,
+                                    text: item.cif + ' - ' + item.nama + ' - ' + item.no_hp
+                                }
+                            })
+                        };
+                    },
+                    cache: true
+                }
+            });
+        });
+
+        $(document).ready(function() {
             $('#cif').change(function() {
                 var cif = $(this).val();
 

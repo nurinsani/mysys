@@ -27,7 +27,9 @@
       <form id="searchForm">
         <div class="mb-3">
           <label for="kodeKelompok" class="form-label">Kode Kelompok</label>
-          <input type="text" class="form-control" id="kodeKelompok" placeholder="Masukkan kode kelompok" required>
+          <select class="form-control select2bs3" id="kodeKelompok" required>
+            <option value="">Cari kode kelompok...</option>
+          </select>
         </div>
         <div class="mb-3">
           <label for="tanggalRealisasi" class="form-label">Tanggal Realisasi</label>
@@ -74,10 +76,36 @@
   </div>
 </div>
 
+@push('scripts')
 @include('sweetalert::alert')
 
 <script>
   $(document).ready(function () {
+    $('#kodeKelompok').select2({
+      theme: 'bootstrap3',
+      placeholder: 'Cari kode kelompok...',
+      allowClear: false,
+      ajax: {
+        url: '{{ route('realisasiMurabahah.cariKelompok') }}',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            q: params.term
+          };
+        },
+        processResults: function (data) {
+          return {
+            results: data.map(item => ({
+              id: item.code_kel,
+              text: item.code_kel + ' - ' + item.nama_kel
+            }))
+          };
+        },
+        cache: true
+      }
+    });
+
     // Search Form Submission
     $('#searchForm').submit(function (e) {
       e.preventDefault();
@@ -202,9 +230,11 @@
 
     function resetPage() {
       $('#searchForm')[0].reset();
+      $('#kodeKelompok').val('').trigger('change');
       $('#tableBody').empty().append('<tr id="emptyState"><td colspan="8">Belum ada data</td></tr>');
       $('#realisasiBtn').prop('disabled', true);
     }
   });
 </script>
+@endpush
 @endsection

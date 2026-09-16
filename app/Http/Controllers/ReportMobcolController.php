@@ -3,18 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use App\Exports\GenericExport;
 
 
-class ReportMobcolController extends Controller
+class ReportMobcolController extends BaseController
 {
      public function index(Request $request)
     {
          $title = 'Report Mobcol';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
       $tanggal = $request->get('tanggal') ?? date('Y-m-d');
         return view('admin.report_mobcol.index', compact('tanggal', 'menus', 'title','tanggal'));
     }

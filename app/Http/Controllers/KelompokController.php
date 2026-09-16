@@ -4,18 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\ao;
 use App\Models\Kelompok;
-use App\Models\Anggota;
-use App\Models\Menu;
+use App\Repositories\Contracts\AnggotaRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class KelompokController extends Controller
+class KelompokController extends BaseController
 {
+    public function __construct(protected AnggotaRepositoryInterface $anggotaRepository)
+    {
+    }
+
     public function data()
     {
-        $kelompok = DB::table('kelompok')->latest()->get();
+        $kelompok = Kelompok::latest()->get();
 
         return datatables()
             ->of($kelompok)
@@ -29,24 +32,18 @@ class KelompokController extends Controller
             ->rawColumns(['aksi'])
             ->make(true);
     }
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $title = 'Master Kelompok';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $ao = ao::all();
-        $anggota = Anggota::all();
-        return view('admin.master_kelompok.index', compact('menus', 'title', 'ao', 'anggota'));
+        return view('admin.master_kelompok.index', compact('menus', 'title', 'ao'));
     }
 
     public function getAnggotaByCif($cif)
     {
-        // Cari anggota berdasarkan cif
-        $anggota = Anggota::where('cif', $cif)->first();
+        $anggota = $this->anggotaRepository->findByCif($cif);
 
-        // Jika data ditemukan, kembalikan response JSON
         if ($anggota) {
             return response()->json([
                 'success' => true,
@@ -54,28 +51,20 @@ class KelompokController extends Controller
             ]);
         }
 
-        // Jika data tidak ditemukan
         return response()->json([
             'success' => false,
             'message' => 'Data tidak ditemukan'
         ], 404);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         try {
-            // tambahkan validasi
             $validated = $request->validate([
                 'code_unit' => 'required',
                 'nama_kel' => 'required|string|max:255',
@@ -85,7 +74,6 @@ class KelompokController extends Controller
                 'no_tlp' => 'required|max:13|min:11',
             ]);
 
-            // generate kode kelompok
             $unit = Auth::user()->unit;
             $lastKelompok = Kelompok::where('code_kel', 'LIKE', $unit.'-%')
                                 ->latest()
@@ -107,17 +95,13 @@ class KelompokController extends Controller
 
             return response()->json(['message' => 'Data berhasil disimpan'], 200);
         } catch (\Exception $e) {
-            // log untuk debugging
             Log::error('Error saat menyimpan data: ' . $e->getMessage());
 
             return response()->json(['message' => 'Terjadi kesalahan'], 500);
         }
     }
-    
 
-    /**
-     * Display the specified resource.
-     */
+
     public function show($id)
     {
         $kelompok = Kelompok::where('code_kel', $id)->first();
@@ -125,17 +109,11 @@ class KelompokController extends Controller
         return response()->json($kelompok);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         $kelompok = Kelompok::where('code_kel', $id)->first();
@@ -144,30 +122,21 @@ class KelompokController extends Controller
         return response()->json('Data berhasil disimpan', 200);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
         try {
-            // Cari produk berdasarkan code_kel
             $kelompok = Kelompok::where('code_kel', $id)->first();
-    
-            // Jika data tidak ditemukan, kembalikan respon error
+
             if (!$kelompok) {
                 return response()->json(['message' => 'Data tidak ditemukan'], 404);
             }
-    
-            // Hapus data
+
             $kelompok->delete();
-    
-            // Kembalikan respon sukses
+
             return response()->json(['message' => 'Data berhasil dihapus.'], 204);
         } catch (\Exception $e) {
-            // Tangani error dan log untuk debugging
             Log::error('Error saat menghapus data: ' . $e->getMessage());
-    
-            // Kembalikan respon error
+
             return response()->json(['message' => 'Terjadi kesalahan'], 500);
         }
     }

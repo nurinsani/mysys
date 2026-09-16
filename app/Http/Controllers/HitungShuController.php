@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class HitungShuController extends Controller
+class HitungShuController extends BaseController
 {
     public function index()
     {
         $title = 'Hitung SHU';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $unit = Auth::user()->unit;
 
         $adaBelumPosting = DB::table('tabel_transaksi')

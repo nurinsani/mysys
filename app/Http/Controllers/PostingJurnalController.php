@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class PostingJurnalController extends Controller
+class PostingJurnalController extends BaseController
 {
     public function index()
     {
         $title = 'Posting Jurnal';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $data = $this->buildData(Auth::user()->unit, Auth::user()->param_tanggal);
 
         return view('admin.posting_jurnal.index', array_merge(compact('title', 'menus'), $data));

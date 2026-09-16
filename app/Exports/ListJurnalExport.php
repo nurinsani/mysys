@@ -2,32 +2,52 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
-class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, ShouldAutoSize
+/**
+ * Sesi 2.6 — sebelumnya FromCollection dengan ->get() di collection(), bisa
+ * berat untuk unit sibuk + rentang tanggal lebar (tabel_transaksi ada 21,8
+ * juta baris). Diganti FromQuery + WithChunkReading (dibaca sebagian-sebagian
+ * dari database, bukan sekaligus ke memori) — beda dari kasus BukuBesar,
+ * di sini TIDAK ada offset() manual yang bikin konflik, jadi WithChunkReading
+ * aman dipakai. Total debet/kredit di baris akhir dihitung lewat query
+ * agregat terpisah (SUM), bukan dari akumulasi saat fetch data.
+ */
+class ListJurnalExport implements FromQuery, WithHeadings, WithMapping, WithChunkReading, WithEvents, ShouldAutoSize
 {
     protected $unit, $awal, $akhir;
-    protected $totalDebet = 0;
-    protected $totalKredit = 0;
-    protected $data;
+    protected $totalDebet;
+    protected $totalKredit;
 
     public function __construct($unit, $awal, $akhir)
     {
         $this->unit = $unit;
         $this->awal = $awal;
         $this->akhir = $akhir;
-    }
 
-    public function collection()
-    {
-        $this->data = DB::table('tabel_transaksi')
+        $totals = DB::table('tabel_transaksi')
             ->where('unit', $this->unit)
             ->whereBetween('tanggal_transaksi', [$this->awal, $this->akhir])
+            ->selectRaw('COALESCE(SUM(debet), 0) as total_debet, COALESCE(SUM(kredit), 0) as total_kredit')
+            ->first();
+
+        $this->totalDebet = $totals->total_debet;
+        $this->totalKredit = $totals->total_kredit;
+    }
+
+    public function query()
+    {
+        return DB::table('tabel_transaksi')
+            ->where('unit', $this->unit)
+            ->whereBetween('tanggal_transaksi', [$this->awal, $this->akhir])
+            ->orderBy('tanggal_transaksi', 'asc')
             ->select(
                 DB::raw("DATE_FORMAT(tanggal_transaksi, '%Y-%m-%d') as tanggal_transaksi"),
                 'kode_transaksi',
@@ -36,14 +56,25 @@ class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, Shou
                 'jenis_transaksi',
                 'debet',
                 'kredit'
-            )
-            ->get();
+            );
+    }
 
-        // Hitung total debet dan kredit
-        $this->totalDebet = $this->data->sum('debet');
-        $this->totalKredit = $this->data->sum('kredit');
+    public function chunkSize(): int
+    {
+        return 5000;
+    }
 
-        return $this->data;
+    public function map($row): array
+    {
+        return [
+            $row->tanggal_transaksi,
+            $row->kode_transaksi,
+            $row->kode_rekening,
+            $row->keterangan_transaksi,
+            $row->jenis_transaksi,
+            $row->debet,
+            $row->kredit,
+        ];
     }
 
     public function headings(): array
@@ -58,7 +89,6 @@ class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, Shou
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                // Merge baris 1 untuk judul periode
                 $event->sheet->mergeCells('A1:G1');
                 $event->sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14],
@@ -69,7 +99,6 @@ class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, Shou
                 ]);
                 $event->sheet->getRowDimension(1)->setRowHeight(25);
 
-                // Style untuk header tabel
                 $event->sheet->getStyle('A2:G2')->applyFromArray([
                     'font' => ['bold' => true],
                     'alignment' => ['horizontal' => 'center'],
@@ -78,10 +107,8 @@ class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, Shou
                     ],
                 ]);
 
-                // Hitung jumlah baris data
                 $rowCount = $event->sheet->getDelegate()->getHighestRow();
 
-                // Apply border ke semua data
                 $event->sheet->getStyle('A2:G' . $rowCount)->applyFromArray([
                     'borders' => [
                         'allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN],
@@ -90,15 +117,12 @@ class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, Shou
 
                 $lastRow = $rowCount + 1;
 
-                // Merge kolom A sampai E
                 $event->sheet->mergeCells("A{$lastRow}:E{$lastRow}");
                 $event->sheet->setCellValue("A{$lastRow}", 'Total');
 
-                // Isi nilai total Debet & Kredit
                 $event->sheet->setCellValue("F{$lastRow}", $this->totalDebet);
                 $event->sheet->setCellValue("G{$lastRow}", $this->totalKredit);
 
-                // Style baris total keseluruhan
                 $event->sheet->getStyle("A{$lastRow}:G{$lastRow}")->applyFromArray([
                     'font' => ['bold' => true],
                     'borders' => [
@@ -106,17 +130,14 @@ class ListJurnalExport implements FromCollection, WithHeadings, WithEvents, Shou
                     ],
                 ]);
 
-                // Khusus buat cell A (yang di-merge), kita set agar tengah
                 $event->sheet->getStyle("A{$lastRow}")->applyFromArray([
                     'alignment' => ['horizontal' => 'center'],
                 ]);
 
-                // Kolom Debet & Kredit tetap rata kanan
                 $event->sheet->getStyle("F{$lastRow}:G{$lastRow}")->applyFromArray([
                     'alignment' => ['horizontal' => 'right'],
                 ]);
 
-                // Format angka Debet & Kredit
                 $event->sheet->getStyle("F{$lastRow}:G{$lastRow}")
                     ->getNumberFormat()
                     ->setFormatCode('#,##0');

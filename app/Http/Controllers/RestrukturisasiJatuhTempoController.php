@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 
-class RestrukturisasiJatuhTempoController extends Controller
+class RestrukturisasiJatuhTempoController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Restrukturisasi Jatuh Tempo';
 
         return view("admin.restrukturisasi_jatuh_tempo.index", compact("menus", "title"));
@@ -45,13 +44,11 @@ class RestrukturisasiJatuhTempoController extends Controller
             if (!$akad)
                 continue;
 
-            // validasi maturity date
             $now = now();
             if ($now->lt(\Carbon\Carbon::parse($akad->maturity_date))) {
                 return response()->json(['error' => 'Restrukturisasi hanya dapat dilakukan setelah maturity date.'], 400);
             }
 
-            // query ke table tunggakan
             $tunggakanRecords = DB::table('tunggakan')
                 ->where('cif', $cif)
                 ->where('unit', $request->unit)
@@ -63,16 +60,14 @@ class RestrukturisasiJatuhTempoController extends Controller
             $angsuran = (int) $akad->angsuran;
             $newTenor = intdiv($totalToBePaid, $angsuran);
             if ($totalToBePaid % $angsuran !== 0) {
-                $newTenor += 1; // Add one more installment for the remainder
+                $newTenor += 1;
             }
             if ($newTenor <= 0) {
                 $newTenor = 1; // gaboleh minus ato 0 (karna di pakai sebagai denominator)
             }
 
-            // delete semua record tunggakan
             DB::table('tunggakan')->where('cif', $cif)->where('unit', $request->unit)->delete();
 
-            // spread total pembayaran
             $jumlahLunas = $totalToBePaid;
 
             $lastPayment = DB::table('pembiayaan_detail')
@@ -80,7 +75,7 @@ class RestrukturisasiJatuhTempoController extends Controller
                 ->where('unit', $request->unit)
                 ->orderByDesc('tgl_jatuh_tempo')
                 ->first();
-            $pembayaranKe = $lastPayment ? (int) $lastPayment->cicilan : 0; // buat dapetin cicilan ke berapanya
+            $pembayaranKe = $lastPayment ? (int) $lastPayment->cicilan : 0;
             $startDate = $lastPayment ? \Carbon\Carbon::parse($lastPayment->tgl_jatuh_tempo)->addDays(7) : \Carbon\Carbon::now()->addDays(7);
 
             // sisanya sama kyk yang di realisasi murabahah
@@ -97,7 +92,6 @@ class RestrukturisasiJatuhTempoController extends Controller
             }
             for ($i = 0; $i < $newTenor; $i++) {
                 $cicilan = $pembayaranKe + 1 + $i;
-                // For all but the last installment, use angsuran; for the last, use the remainder
                 if ($i < $newTenor - 1) {
                     $jumlah_bayar = $angsuran;
                 } else {

@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class MutasiKasController extends Controller
+class MutasiKasController extends BaseController
 {
     public function index()
     {
         $title = 'Mutasi Kas';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         return view('admin.mutasi_kas.index', compact('menus', 'title'));
     }
@@ -37,7 +36,6 @@ class MutasiKasController extends Controller
             )
             ->get();
 
-        // Hitung saldo berjalan
         $saldo = 0;
         $data = $data->map(function ($row) use (&$saldo) {
             $saldo += ($row->debet - $row->kredit);

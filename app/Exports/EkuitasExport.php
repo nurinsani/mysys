@@ -31,9 +31,6 @@ class EkuitasExport implements FromCollection, WithHeadings, WithStyles, WithCol
         $this->total_saldo_akhir = $total_saldo_akhir;
     }
 
-    /**
-     * @return \Illuminate\Support\Collection
-     */
     public function collection()
     {
         return collect([
@@ -67,9 +64,6 @@ class EkuitasExport implements FromCollection, WithHeadings, WithStyles, WithCol
         ]);
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
         return [
@@ -83,9 +77,6 @@ class EkuitasExport implements FromCollection, WithHeadings, WithStyles, WithCol
         ];
     }
 
-    /**
-     * @return array
-     */
     public function columnWidths(): array
     {
         return [
@@ -99,17 +90,11 @@ class EkuitasExport implements FromCollection, WithHeadings, WithStyles, WithCol
         ];
     }
 
-    /**
-     * @return string
-     */
     public function title(): string
     {
         return 'Laporan Ekuitas';
     }
 
-    /**
-     * @param Worksheet $sheet
-     */
     public function styles(Worksheet $sheet)
     {
         $sheet->getStyle('A1:G1')->applyFromArray([

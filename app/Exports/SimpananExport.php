@@ -7,10 +7,6 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class SimpananExport implements WithMultipleSheets
 {
-    /**
-    * @return \Illuminate\Support\Collection
-    */
-    
     protected $status;
     protected $bulan;
     protected $tahun;

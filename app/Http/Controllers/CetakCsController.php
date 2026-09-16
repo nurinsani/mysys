@@ -3,18 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use RealRashid\SweetAlert\Facades\Alert;
 
 
-class CetakCsController extends Controller
+class CetakCsController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Cs';
 
         return view("admin.cetak_cs.index", compact("menus", "title"));
@@ -27,14 +26,13 @@ class CetakCsController extends Controller
             ->where('kode_unit',Auth::user()->unit)
             ->select('cao as id', 'nama_ao as text')
             ->get();
-            //dd($data);
 
         return response()->json($data);
     }
 
     public function pdfCs(Request $request)
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Cs';
         $tanggal = $request->input('tanggalTagih');
         $hari = \Carbon\Carbon::parse($tanggal)->locale('id')->translatedFormat('l');
@@ -45,7 +43,6 @@ class CetakCsController extends Controller
             return redirect()->back();
         }
 
-        // Ambil data anggota
         $cs_anggota = DB::table('pembiayaan')
             ->join('kelompok', 'pembiayaan.code_kel', '=', 'kelompok.code_kel')
             ->join('ao', 'ao.cao', '=', 'pembiayaan.cao')
@@ -61,7 +58,6 @@ class CetakCsController extends Controller
             ->groupBy('pembiayaan.cif')
 
             ->get();
-        // Kelompokkan berdasarkan 'code_kel'
         $cs_anggota = $cs_anggota->groupBy('code_kel');
 
         if ($cs_anggota->isEmpty()) {
@@ -69,7 +65,6 @@ class CetakCsController extends Controller
             return redirect()->back();
         }
 
-        // Total per kelompok
         $data = [];
     foreach ($cs_anggota as $kelompokCode => $anggota) {
         $totals = [
@@ -97,7 +92,6 @@ class CetakCsController extends Controller
         ];
     }
 
-    // Generate PDF
     $pdf = Pdf::loadView('admin.cetak_cs.pdfcs', compact('data'))->setPaper('a4', 'landscape');
     return view('admin.cetak_cs.framePdf', compact('pdf', 'data', 'menus', 'title'));
     }

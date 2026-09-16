@@ -9,9 +9,6 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 
 class ReportTunggakanExport implements FromCollection, WithHeadings
 {
-    /**
-    * @return \Illuminate\Support\Collection
-    */
     public function collection()
     {
         $unit = Auth::user()->unit;

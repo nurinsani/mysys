@@ -3,16 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
-// use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class PembatalanWakalahController extends Controller
+class PembatalanWakalahController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Pembatalan Wakalah';
 
         return view("admin.pembatalan_wakalah.index", compact("menus", "title"));
@@ -21,7 +19,6 @@ class PembatalanWakalahController extends Controller
     public function data()
     {
         try {
-            //\Log::info('Fetching wakalah data');
             $wakalahData = DB::table('temp_akad_mus')
                 ->leftJoin('anggota', 'temp_akad_mus.cif', '=', 'anggota.cif')
                 ->leftJoin('kelompok', 'temp_akad_mus.code_kel', '=', 'kelompok.code_kel')
@@ -36,9 +33,6 @@ class PembatalanWakalahController extends Controller
                     'temp_akad_mus.maturity_date as tgl_jatuh_tempo'
                 )
                 ->get();
-
-            //\Log::info('Wakalah data count: ' . $wakalahData->count());
-            //\Log::info('Wakalah data: ' . json_encode($wakalahData));
 
             return datatables()
                 ->of($wakalahData)
@@ -69,17 +63,12 @@ class PembatalanWakalahController extends Controller
                 ->rawColumns(['pilih'])
                 ->make(true);
         } catch (\Exception $e) {
-            //\Log::error('DataTables Error: ' . $e->getMessage());
             return response()->json(['error' => 'Something went wrong!'], 500);
         }
     }
 
     public function realisasi(Request $request)
     {
-        //\Log::info('Running Function');
-
-        // dd($request->cifs);
-        // Validate request
         $request->validate([
             'cifs' => 'required|array',
             'cifs.*' => 'string',
@@ -87,12 +76,8 @@ class PembatalanWakalahController extends Controller
             'id' => 'required|string'
         ]);
 
-        //\Log::info('Input Validated');
-
         try {
             DB::beginTransaction();
-
-            //\Log::info('Starting DB Transaction');
 
             foreach ($request->cifs as $cif) {
                 DB::table('temp_akad_mus')
@@ -122,7 +107,8 @@ class PembatalanWakalahController extends Controller
                             'kredit' => 0,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $request->id
+                            'id_admin' => $request->id,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $record->unit,
@@ -135,7 +121,8 @@ class PembatalanWakalahController extends Controller
                             'kredit' => $record->plafond,
                             'tanggal_posting' => date('Y-m-d'),
                             'keterangan_posting' => '',
-                            'id_admin' => $request->id
+                            'id_admin' => $request->id,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
                     DB::table('tabel_transaksi')->insert($transaksiData);
@@ -144,19 +131,12 @@ class PembatalanWakalahController extends Controller
 
             DB::commit();
 
-            // \Log::info('Realisasi Pembatalan Wakalah', [
-            //     'cifs' => $request->cifs,
-            //     'param_tanggal' => $request->param_tanggal,
-            //     'id' => $request->id
-            // ]);
-
             return response()->json([
                 'success' => true,
                 'message' => 'Pembatalan Wakalah berhasil direalisasikan'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            //\Log::error('Error in realisasi: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()

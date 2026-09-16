@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-class CetakAdendumController extends Controller
+class CetakAdendumController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Adendum';
 
         return view('admin.cetak_adendum.index', compact('menus', 'title'));
@@ -24,8 +23,8 @@ class CetakAdendumController extends Controller
         $jenis_rest = $request->input('jenis_rest');
 
         $data = DB::table('history_rest')
-            ->join('anggota', 'history_rest.cif', '=', 'anggota.cif') // Relasi antar tabel
-            ->join('pembiayaan', 'history_rest.cif', '=', 'pembiayaan.cif') // Relasi antar tabel
+            ->join('anggota', 'history_rest.cif', '=', 'anggota.cif')
+            ->join('pembiayaan', 'history_rest.cif', '=', 'pembiayaan.cif')
             ->select(
                 'history_rest.*',
                 'anggota.*',
@@ -36,8 +35,6 @@ class CetakAdendumController extends Controller
             ->where('history_rest.jenis_rest', $jenis_rest)
             ->where('history_rest.status', 'proses')
             ->get();
-
-        // dd($data);
 
         return response()->json(['data' => $data]);
     }
@@ -50,13 +47,12 @@ class CetakAdendumController extends Controller
         $code_kel = $request->input('code_kel');
         $jenis_rest = $request->input('jenis_rest');
 
-        // Ambil data berdasarkan tanggal
         $data = DB::table('history_rest')
-            ->join('anggota', 'history_rest.cif', '=', 'anggota.cif') // Relasi antar tabel
-            ->join('kelompok', 'history_rest.code_kel', '=', 'kelompok.code_kel') // Relasi antar tabel
-            ->join('pembiayaan', 'history_rest.cif', '=', 'pembiayaan.cif') // Relasi antar tabel
-            ->join('ao', 'kelompok.cao', '=', 'ao.cao') // Relasi antar tabel
-            ->join('mm', 'ao.atasan', '=', 'mm.nik') // Relasi antar tabel
+            ->join('anggota', 'history_rest.cif', '=', 'anggota.cif')
+            ->join('kelompok', 'history_rest.code_kel', '=', 'kelompok.code_kel')
+            ->join('pembiayaan', 'history_rest.cif', '=', 'pembiayaan.cif')
+            ->join('ao', 'kelompok.cao', '=', 'ao.cao')
+            ->join('mm', 'ao.atasan', '=', 'mm.nik')
             ->select(
                 'history_rest.pokok as rest_pokok',
                 'history_rest.margin as rest_margin',
@@ -79,27 +75,20 @@ class CetakAdendumController extends Controller
             ->where('history_rest.status', 'proses')
             ->get();
 
-            // dd($hari_ini, $today);
-
         if ($data->isEmpty()) {
 
             alert()->error('Oops!', 'Data tidak di temukan!');
             return redirect()->back();
         }
 
-        // Update status menjadi "done"
         DB::table('history_rest')
             ->where('code_kel', $code_kel)
             ->where('jenis_rest', $jenis_rest)
             ->update(['status' => 'done']);
 
-        // Generate PDF
         $pdf = PDF::loadView('admin.cetak_adendum.pdf', compact('data', 'jenis_rest', 'hari_ini', 'today'))
         ->setPaper('a4', 'portrait');
 
-
-        // Tampilkan preview di browser
         return $pdf->stream('Adendum-' . $code_kel . '.pdf');
-        // dd($data);
     }
 }

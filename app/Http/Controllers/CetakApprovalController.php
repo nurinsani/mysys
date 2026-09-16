@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Menu;
 
-class CetakApprovalController extends Controller
+class CetakApprovalController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Approval';
 
         return view("admin.cetak_approval.index", compact("menus", "title"));
@@ -18,7 +17,7 @@ class CetakApprovalController extends Controller
 
     public function hasil(Request $request)
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Approval';
 
         $request->validate([
@@ -37,7 +36,6 @@ class CetakApprovalController extends Controller
             ->where('unit', $unit)
             ->get();
 
-        // Error handling if no data is found
         if ($results->isEmpty()) {
             if ($request->ajax()) {
                 return response()->json([
@@ -50,7 +48,6 @@ class CetakApprovalController extends Controller
             return redirect()->back();
         }
 
-        // AJAX response
         if ($request->ajax()) {
             $iframeUrl = route('pdf.generateApproval', [
                 'feature' => 'cetak_approval',

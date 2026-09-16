@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ReportTunggakanExport;
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportTunggakanController extends Controller
+class ReportTunggakanController extends BaseController
 {
     public function data()
     {
@@ -54,7 +53,7 @@ class ReportTunggakanController extends Controller
     public function index()
     {
         $title = 'Report Tunggakan';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.report_tunggakan.index', compact('title', 'menus'));
     }
 

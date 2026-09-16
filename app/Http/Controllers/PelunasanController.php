@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class PelunasanController extends Controller
+class PelunasanController extends BaseController
 {
     public function index ()
     {
         $title = 'Pelunasan';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.pelunasan.index', compact('title', 'menus'));
     }
 
@@ -83,7 +82,6 @@ class PelunasanController extends Controller
                 ], 404);
             }
 
-            // validasi saldo simpanan dan os
             if ($simpanan < $pembiayaan->os) {
                 return response()->json([
                     'success' => false,
@@ -96,8 +94,7 @@ class PelunasanController extends Controller
             $tgl_system = now()->format('Y-m-d H:i:s');
             $user_id = Auth::user()->id;
             $ket = 'Pelunasan an ' . $anggota->nama;
-            $timestamp = date('YmdHis');
-            $reff = $unit . $timestamp . strtoupper(\Str::random(2));
+            $reff = generate_reff($unit);
 
             $transaksi = [
                 [
@@ -111,7 +108,8 @@ class PelunasanController extends Controller
                     'kredit' => '0',
                     'tanggal_posting' => $tgl_system,
                     'keterangan_posting' => 'Post',
-                    'id_admin' => $user_id
+                    'id_admin' => $user_id,
+                    'ip_address' => request()->ip(),
                 ],
                 [
                     'unit' => $unit,
@@ -124,7 +122,8 @@ class PelunasanController extends Controller
                     'kredit' => $pembiayaan->os + $pembiayaan->bagi_hasil,
                     'tanggal_posting' => $tgl_system,
                     'keterangan_posting' => 'Post',
-                    'id_admin' => $user_id
+                    'id_admin' => $user_id,
+                    'ip_address' => request()->ip(),
                 ],
                 [
                     'unit' => $unit,
@@ -137,7 +136,8 @@ class PelunasanController extends Controller
                     'kredit' => 0,
                     'tanggal_posting' => $tgl_system,
                     'keterangan_posting' => 'Post',
-                    'id_admin' => $user_id
+                    'id_admin' => $user_id,
+                    'ip_address' => request()->ip(),
                 ],
                 [
                     'unit' => $unit,
@@ -150,7 +150,8 @@ class PelunasanController extends Controller
                     'kredit' => $pembiayaan->bagi_hasil,
                     'tanggal_posting' => $tgl_system,
                     'keterangan_posting' => 'Post',
-                    'id_admin' => $user_id
+                    'id_admin' => $user_id,
+                    'ip_address' => request()->ip(),
                 ]
             ];
 
@@ -176,7 +177,6 @@ class PelunasanController extends Controller
             ]);
 
 
-            // update pembiayaan
             DB::table('pembiayaan')
                 ->where('no_anggota', $anggota->no)
                 ->update([

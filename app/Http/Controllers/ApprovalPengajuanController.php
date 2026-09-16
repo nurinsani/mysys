@@ -5,28 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Anggota;
 use App\Models\ao;
 use App\Models\Kelompok;
-use App\Models\Menu;
 use App\Models\temp_akad_mus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
-class ApprovalPengajuanController extends Controller
+class ApprovalPengajuanController extends BaseController
 {
     public function index()
     {
-        $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-        ->where(function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        })
-        ->with(['children' => function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        }])
-        ->orderBy('order')
-        ->get();
+        $menus = $this->getMenus();
 
         $title = 'Approval Pengajuan';
 
@@ -48,18 +37,7 @@ class ApprovalPengajuanController extends Controller
     {
         $title = 'Approval Pengajuan';
 
-        $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-        ->where(function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        })
-        ->with(['children' => function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        }])
-        ->orderBy('order')
-        ->get();
+        $menus = $this->getMenus();
 
         $ao = ao::all();
         $kelompok = Kelompok::all();
@@ -81,7 +59,6 @@ class ApprovalPengajuanController extends Controller
             'updated_at' => now()
         ]);
 
-        // update anggota
         Anggota::where('no', $no_anggota)->update([
             'ibu_kandung' => $request->ibu_kandung,
             'updated_at' => now()
@@ -144,27 +121,29 @@ class ApprovalPengajuanController extends Controller
 
     public function getKtp(Request $request)
     {
-        // Validasi input NIK
         $request->validate([
             'nik' => 'required|string'
         ]);
 
         $nik = $request->input('nik');
 
-        // Lakukan request ke API eksternal
-        $response = Http::get("http://mobcol.nurinsani.co.id/apimobcol/rmcKtp.php?ktp={$nik}");
+        try {
+            $response = Http::timeout(10)->get("http://mobcoll.nurinsani.co.id/apimobcol/rmcKtp.php?ktp={$nik}");
+        } catch (\Illuminate\Http\Client\ConnectionException|\GuzzleHttp\Exception\GuzzleException $e) {
+            Log::error('Koneksi ke layanan cek KTP gagal: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Layanan cek KTP sedang tidak bisa diakses. Coba lagi nanti.'
+            ], 503);
+        }
 
-        // Jika request gagal
         if (!$response->successful()) {
             return response()->json([
                 'error' => 'Data tidak ditemukan'
             ], 404);
         }
 
-        // Ambil data dari response
         $data = $response->json();
 
-        // Kembalikan data sebagai response JSON
         return response()->json($data);
     }
 
@@ -172,18 +151,7 @@ class ApprovalPengajuanController extends Controller
 
     public function ajukanKembali(Request $request)
     {
-        $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-        ->where(function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        })
-        ->with(['children' => function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        }])
-        ->orderBy('order')
-        ->get();
+        $menus = $this->getMenus();
 
         $title = 'Ajukan Kembali';
         
@@ -238,18 +206,7 @@ class ApprovalPengajuanController extends Controller
 
     public function hapusPengajuan(Request $request)
     {
-        $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-        ->where(function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        })
-        ->with(['children' => function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        }])
-        ->orderBy('order')
-        ->get();
+        $menus = $this->getMenus();
 
         $title = 'Hapus Pengajuan';
         
@@ -306,18 +263,7 @@ class ApprovalPengajuanController extends Controller
 
     public function turunPlafond(Request $request)
     {
-        $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-        ->where(function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        })
-        ->with(['children' => function ($query) use ($roleId) {
-            $query->where('role_id', $roleId)
-                ->orWhereNull('role_id');
-        }])
-        ->orderBy('order')
-        ->get();
+        $menus = $this->getMenus();
 
         $title = 'Turun Plafond';
         
@@ -356,7 +302,6 @@ class ApprovalPengajuanController extends Controller
             'harga_baru' => 'required|numeric|min:1'
         ]);
 
-        // Ambil akad
         $akad = DB::table('temp_akad_mus')
             ->where('cif', $request->cif)
             ->first();
@@ -390,7 +335,6 @@ class ApprovalPengajuanController extends Controller
         $angsuran = $pokok + $ijaroh;
         $bulat = $angsuran + $param->tab;
 
-        // Update akad
         DB::table('temp_akad_mus')
             ->where('cif', $request->cif)
             ->update([

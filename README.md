@@ -1,66 +1,76 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Musyarokah App
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi inti operasional **KSPPS** (koperasi simpan pinjam syariah): pencatatan anggota &amp; kelompok, transaksi simpanan/pembiayaan, realisasi akad (Musyarokah, Murabahah, Wakalah), jurnal &amp; posting akuntansi, sampai pelaporan (neraca, laba rugi, tunggakan, SHU). Dibangun di atas Laravel 11 + AdminLTE 3.
 
-## About Laravel
+## Kebutuhan Sistem
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP ^8.2
+- MySQL (skema live sudah menyimpang di beberapa tabel dari file migration bawaan — lihat [`artefak/rencana_pengerjaan.md`](artefak/rencana_pengerjaan.md) untuk catatan lengkapnya)
+- Composer
+- Node.js + npm (untuk build asset Vite)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Instalasi
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+npm install && npm run build
 
-## Learning Laravel
+cp .env.example .env
+php artisan key:generate
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Isi `.env`:
+- `DB_*` — koneksi ke database MySQL utama aplikasi.
+- `DB_CS_*` — koneksi read-only ke database `mobcol` (core system eksternal), dipakai `PullDataService` untuk sinkronisasi data. Minta kredensial ke tim infra; jangan commit nilai sungguhannya.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+php artisan migrate
+php artisan db:seed   # opsional: role, menu, param dasar
+php artisan serve
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Laravel Telescope (dev only)
 
-## Laravel Sponsors
+Terpasang sebagai `require-dev` dan hanya didaftarkan saat `APP_ENV=local` (lihat `AppServiceProvider::register()`) — tidak aktif dan tidak akan crash di production meski `composer install --no-dev`. Akses lewat `/telescope` saat berjalan lokal.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Menjalankan Test
 
-### Premium Partners
+Aplikasi ini **tidak punya database test terpisah** — seluruh test (`php artisan test`) jalan terhadap database MySQL development yang sama dengan yang dipakai aplikasi sehari-hari. Untuk menjaga keamanan data:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- Semua test class memakai trait `DatabaseTransactions` (bukan `RefreshDatabase`) — tiap test dibungkus transaksi dan otomatis di-rollback, tidak ada data yang tertinggal permanen.
+- **Jangan** ganti ke `RefreshDatabase` kecuali database test terpisah benar-benar disiapkan — `RefreshDatabase` menjalankan ulang migrasi yang skemanya sudah tidak 1:1 dengan tabel live.
 
-## Contributing
+```bash
+php artisan test
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Struktur Kode (ringkas)
 
-## Code of Conduct
+```
+app/
+  Http/Controllers/     ← HTTP layer, tipis: validasi via Form Request, delegasi ke Service
+  Http/Requests/         ← Form Request (validasi terpusat per aksi)
+  Services/              ← business logic (Transaksi, Setoran, Realisasi, PullData, ...)
+  Repositories/           ← akses data untuk entitas dengan query kompleks/berulang
+    Contracts/            ← interface, di-bind ke implementasi Eloquent di AppServiceProvider
+    Eloquent/
+  Models/                ← Eloquent model (nama tabel lowercase menyesuaikan skema live)
+routes/
+  web.php                 ← seluruh rute aplikasi (AdminLTE, session-based auth, role:N middleware)
+  api.php                 ← scaffold /api/v1, belum dipakai (lihat komentar di file)
+artefak/
+  rencana_pengerjaan.md   ← riwayat & rencana kerja refactoring, per sesi
+  evaluasi_enterprise.md  ← audit pola arsitektur vs standar enterprise, temuan & prioritas
+docs/
+  api.md                  ← ringkasan endpoint & pola integrasi
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Detail lebih lanjut soal pola arsitektur (Service Layer, Repository, Form Request) dan riwayat setiap tahap refactoring ada di [`artefak/rencana_pengerjaan.md`](artefak/rencana_pengerjaan.md).
 
-## Security Vulnerabilities
+## Dokumentasi Endpoint
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Lihat [`docs/api.md`](docs/api.md).
 
-## License
+## Lisensi
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Internal — tidak untuk didistribusikan di luar organisasi.

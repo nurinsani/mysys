@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Menu;
 
-class SetoranBankController extends Controller
+class SetoranBankController extends BaseController
 {
     public function index()
     {
-         $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+         $menus = $this->getMenus();
         $title = 'Setoran Bank';
         return view('admin.setoran_bank.index', compact('menus', 'title'));
     }

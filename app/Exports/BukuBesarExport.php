@@ -66,16 +66,13 @@ class BukuBesarExport implements FromCollection, WithHeadings, WithEvents
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Merge title
                 $sheet->mergeCells('A1:G1');
                 $sheet->mergeCells('A2:G2');
                 $sheet->mergeCells('A3:G3');
 
-                // Bold header
                 $sheet->getStyle('A1:A3')->getFont()->setBold(true);
                 $sheet->getStyle('A10:G10')->getFont()->setBold(true);
 
-                // Auto width
                 foreach (range('A', 'G') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }

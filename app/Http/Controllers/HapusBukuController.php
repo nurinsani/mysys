@@ -3,15 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class HapusBukuController extends Controller
+class HapusBukuController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Hapus Buku';
 
         return view("admin.hapus_buku.index", compact("menus", "title"));
@@ -40,7 +39,6 @@ class HapusBukuController extends Controller
                 ->get();
 
             if ($data->isNotEmpty()) {
-                // Get simpanan data for each record
                 $data = $data->map(function ($item) {
                     $simpananTotals = DB::table('simpanan')
                         ->where('cif', $item->cif)
@@ -93,7 +91,6 @@ class HapusBukuController extends Controller
                 throw new \Exception('Data pembiayaan tidak ditemukan');
             }
 
-            // Calculate final pokok based on jenis_wo
             $finalPokok = $validated['pokok'];
             $runTenor = $validated['minggu_ke'];
             $administrativeAmount = 0;
@@ -118,7 +115,6 @@ class HapusBukuController extends Controller
 
             DB::beginTransaction();
             try {
-                // Insert transaction records
                 $transactionRecords = [
                     [
                         'unit' => $validated['userUnit'],
@@ -131,7 +127,8 @@ class HapusBukuController extends Controller
                         'kredit' => 0,
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "PMYD-PYD Murabahah Mingguan AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ],
                     [
                         'unit' => $validated['userUnit'],
@@ -144,7 +141,8 @@ class HapusBukuController extends Controller
                         'kredit' => $validated['margin'],
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "Piutang Murabahah Mingguan AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ],
                     [
                         'unit' => $validated['userUnit'],
@@ -157,7 +155,8 @@ class HapusBukuController extends Controller
                         'kredit' => 0,
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "PPA Umum-PYD Piutang Murabahah AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ],
                     [
                         'unit' => $validated['userUnit'],
@@ -170,7 +169,8 @@ class HapusBukuController extends Controller
                         'kredit' => 0,
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "Simpanan Wadiah Kelompok AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ],
                     [
                         'unit' => $validated['userUnit'],
@@ -183,7 +183,8 @@ class HapusBukuController extends Controller
                         'kredit' => $validated['pokok'],
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "Piutang Murabahah Mingguan AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ],
                     [
                         'unit' => $validated['userUnit'],
@@ -196,7 +197,8 @@ class HapusBukuController extends Controller
                         'kredit' => 0,
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "Rekening Administratif - Piutang Murabahah AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ],
                     [
                         'unit' => $validated['userUnit'],
@@ -209,7 +211,8 @@ class HapusBukuController extends Controller
                         'kredit' => $administrativeAmount,
                         'tanggal_posting' => $validated['tanggal'],
                         'keterangan_posting' => "Rekening Administratif - Rekening Lawan AN {$validated['nama']}",
-                        'id_admin' => $validated['userId']
+                        'id_admin' => $validated['userId'],
+                        'ip_address' => request()->ip(),
                     ]
                 ];
 
@@ -239,7 +242,6 @@ class HapusBukuController extends Controller
 
             DB::beginTransaction();
             try {
-                // Delete all records with this nomor_bukti
                 DB::table('tabel_transaksi')
                     ->where('kode_transaksi', $nomor_bukti)
                     ->delete();
@@ -283,9 +285,8 @@ class HapusBukuController extends Controller
                     $totalAmount = $record['pokok'] + $record['margin'];
                     $formattedDate = date('Y-m-d H:i:s', strtotime($record['userDate']));
 
-                    // Insert into simpanan
                     DB::table('simpanan')->insert([
-                        'reff' => 'WO-' . Str::random(10),
+                        'reff' => generate_reff($record['userUnit']),
                         'buss_date' => $formattedDate,
                         'norek' => $record['no_anggota'],
                         'unit' => $record['userUnit'],
@@ -300,7 +301,6 @@ class HapusBukuController extends Controller
                         'kode_transaksi' => $record['nomor_bukti']
                     ]);
 
-                    // Insert into rek_loan
                     DB::table('rek_loan')->insert([
                         'tgl_realisasi' => $formattedDate,
                         'unit' => $record['userUnit'],
@@ -315,12 +315,10 @@ class HapusBukuController extends Controller
                         'ao' => $pembiayaan->cao
                     ]);
 
-                    // Insert into pembiayaan_wos
                     $pembiayaanData = (array) $pembiayaan;
                     $pembiayaanData['os'] = $totalAmount;
                     DB::table('pembiayaan_wos')->insert($pembiayaanData);
 
-                    // Delete from pembiayaan
                     DB::table('pembiayaan')
                         ->where('cif', $record['cif'])
                         ->delete();

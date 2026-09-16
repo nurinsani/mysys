@@ -104,7 +104,7 @@
 
             try {
                 // Kirim request ke controller Laravel
-                const response = await fetch('/cari-ktp', {
+                const response = await fetch('/anggota/cari-ktp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

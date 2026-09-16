@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ListJurnalExport;
 
 
-class ListJurnalKpController extends Controller
+class ListJurnalKpController extends BaseController
 {
     public function index()
     {

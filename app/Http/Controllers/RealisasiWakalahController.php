@@ -3,23 +3,35 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\temp_akad_mus;
+use App\Repositories\Contracts\KelompokRepositoryInterface;
 
-class RealisasiWakalahController extends Controller
+class RealisasiWakalahController extends BaseController
 {
+    public function __construct(
+        protected KelompokRepositoryInterface $kelompokRepository
+    ) {
+    }
+
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $pembiayaan = DB::table('pembiayaan')
         ->selectRaw('SUM(os - saldo_margin) as os, COUNT(cif) as noa')
         ->first();
-        //dd($pembiayaan);
         $title = 'Dashboard';
 
         return view('admin.realisasi_wakalah.index',compact('menus','pembiayaan','title'));
 
+    }
+
+    public function cariKelompok(Request $request)
+    {
+        $kelompok = $this->kelompokRepository->search($request->q, Auth::user()->unit, 20);
+
+        return response()->json($kelompok);
     }
 
     public function getData(Request $request)

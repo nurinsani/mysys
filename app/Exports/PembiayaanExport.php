@@ -13,10 +13,6 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class PembiayaanExport implements FromCollection, WithTitle, WithHeadings, WithStyles
 {
-    /**
-    * @return \Illuminate\Support\Collection
-    */
-
     protected $status;
     protected $bulan;
     protected $tahun;
@@ -176,11 +172,11 @@ class PembiayaanExport implements FromCollection, WithTitle, WithHeadings, WithS
             1 => [
                 'font' => [
                     'bold' => true,
-                    'color' => ['argb' => 'FFFFFFFF'] // white text
+                    'color' => ['argb' => 'FFFFFFFF']
                 ],
                 'fill' => [
                     'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'FF008000'] // green
+                    'startColor' => ['argb' => 'FF008000']
                 ],
                 'alignment' => [
                     'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER

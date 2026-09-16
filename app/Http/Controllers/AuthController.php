@@ -14,7 +14,6 @@ class AuthController extends Controller
 
     public function dologin(Request $request)
     {
-        // Validasi input
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required'
@@ -22,7 +21,6 @@ class AuthController extends Controller
 
         if (auth()->attempt($credentials)) {
 
-            // Regenerasi session setelah login
             $request->session()->regenerate();
 
             $role = auth()->user()->role_id;
@@ -42,7 +40,6 @@ class AuthController extends Controller
             }
         }
 
-        // Jika login gagal
         return back()->with('error', 'Email atau password salah');
     }
 

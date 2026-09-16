@@ -3,19 +3,22 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use App\Models\temp_akad_mus;
+use App\Repositories\Contracts\KelompokRepositoryInterface;
 
-class SetoranLimaPersenController extends Controller
+class SetoranLimaPersenController extends BaseController
 {
+    public function __construct(protected KelompokRepositoryInterface $kelompokRepository)
+    {
+    }
+
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $pembiayaan = DB::table('pembiayaan')
         ->selectRaw('SUM(os - saldo_margin) as os, COUNT(cif) as noa')
         ->first();
-        //dd($pembiayaan);
         $title = 'Setoran Lima Persen';
 
         return view('admin.lima_persen.index',compact('menus','pembiayaan','title'));
@@ -76,7 +79,6 @@ class SetoranLimaPersenController extends Controller
         DB::beginTransaction();
         try {
             foreach ($cekbox as $value) {
-                // Ambil data loan
                 $loan = DB::table('temp_akad_mus')
                     ->leftJoin('anggota', 'anggota.cif', '=', 'temp_akad_mus.cif')
                     ->where('temp_akad_mus.cif', $value)
@@ -100,18 +102,8 @@ class SetoranLimaPersenController extends Controller
                 $plafond = $loan->plafond;
                 $nominal = $plafond * 5 / 100;
 
-                // Hitung simpanan pokok & wajib
                 $pokok = DB::table('simpanan_pokok')->where('cif', $value)->sum(DB::raw('kredit - debet'));
                 $wajib = DB::table('simpanan_wajib')->where('cif', $value)->sum(DB::raw('kredit - debet'));
-
-                $timestamp = date('YmdHis');
-                $urutPokok = DB::table('simpanan_pokok')->count() + 1;
-                $urutWajib = DB::table('simpanan_wajib')->count() + 1;
-
-
-                $urut_pokok = $unit . $timestamp . $urutPokok;
-                $urut_wajib = $unit . $timestamp . $urutWajib;
-
 
                 if ($pokok == 0 && $wajib >= 0) {
                     $in_pokok = 50000;
@@ -128,7 +120,7 @@ class SetoranLimaPersenController extends Controller
                         'kredit' => $in_pokok,
                         'userid' => $userid,
                         'ket' => 'Simpanan Pokok',
-                        'reff' => $urut_pokok,
+                        'reff' => generate_reff($unit),
                         'cao' => $cao,
                         'blok' => '4',
                         'kode_transaksi' => $kode_trans
@@ -148,7 +140,8 @@ class SetoranLimaPersenController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $userid
+                            'id_admin' => $userid,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -161,7 +154,8 @@ class SetoranLimaPersenController extends Controller
                             'debet' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $userid
+                            'id_admin' => $userid,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
                     DB::table('tabel_transaksi')->insert($simpanTransaksi);
@@ -181,7 +175,7 @@ class SetoranLimaPersenController extends Controller
                             'kredit' => $sisa,
                             'userid' => $userid,
                             'ket' => 'PB Simpanan Wajib',
-                            'reff' => $urut_wajib,
+                            'reff' => generate_reff($unit),
                             'cao' => $cao,
                             'blok' => '1',
                             'kode_transaksi' => $kode_trans
@@ -200,7 +194,8 @@ class SetoranLimaPersenController extends Controller
                                 'kredit' => '0',
                                 'tanggal_posting' => $tgl_system,
                                 'keterangan_posting' => '',
-                                'id_admin' => $userid
+                                'id_admin' => $userid,
+                                'ip_address' => request()->ip(),
                             ],
                             [
                                 'unit' => $unit,
@@ -213,7 +208,8 @@ class SetoranLimaPersenController extends Controller
                                 'debet' => '0',
                                 'tanggal_posting' => $tgl_system,
                                 'keterangan_posting' => '',
-                                'id_admin' => $userid
+                                'id_admin' => $userid,
+                                'ip_address' => request()->ip(),
                             ]
                         ];
                         DB::table('tabel_transaksi')->insert($simpanTransaksi);
@@ -232,7 +228,7 @@ class SetoranLimaPersenController extends Controller
                         'kredit' => $nominal,
                         'userid' => $userid,
                         'ket' => 'PB Simpanan Wajib',
-                        'reff' => $urut_wajib,
+                        'reff' => generate_reff($unit),
                         'cao' => $cao,
                         'blok' => '1',
                         'kode_transaksi' => $kode_trans
@@ -251,7 +247,8 @@ class SetoranLimaPersenController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $userid
+                            'id_admin' => $userid,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -264,7 +261,8 @@ class SetoranLimaPersenController extends Controller
                             'debet' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $userid
+                            'id_admin' => $userid,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
                     DB::table('tabel_transaksi')->insert($simpanTransaksi);
@@ -284,7 +282,7 @@ class SetoranLimaPersenController extends Controller
                         'kredit' => $nominal,
                         'userid' => $userid,
                         'ket' => 'PB Simpanan Wajib Kedua',
-                        'reff' => $urut_wajib,
+                        'reff' => generate_reff($unit),
                         'cao' => $cao,
                         'blok' => '1',
                         'kode_transaksi' => $kode_trans
@@ -303,7 +301,8 @@ class SetoranLimaPersenController extends Controller
                             'kredit' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $userid
+                            'id_admin' => $userid,
+                            'ip_address' => request()->ip(),
                         ],
                         [
                             'unit' => $unit,
@@ -316,7 +315,8 @@ class SetoranLimaPersenController extends Controller
                             'debet' => '0',
                             'tanggal_posting' => $tgl_system,
                             'keterangan_posting' => '',
-                            'id_admin' => $userid
+                            'id_admin' => $userid,
+                            'ip_address' => request()->ip(),
                         ]
                     ];
                     DB::table('tabel_transaksi')->insert($simpanTransaksi);
@@ -346,16 +346,7 @@ class SetoranLimaPersenController extends Controller
 
     public function getSetKelompok(Request $request)
     {
-        $search = $request->q;
-        $kelompok = DB::table('kelompok')
-        ->select('code_kel', 'nama_kel')
-        ->where('code_unit', Auth()->user()->unit)
-        ->when($search, function ($query, $search) {
-            return $query->where('code_kel', 'like', "%$search%")
-                         ->orWhere('nama_kel', 'like', "%$search%");
-        })
-        ->limit(20)
-        ->get();
+        $kelompok = $this->kelompokRepository->search($request->q, auth()->user()->unit, 20);
 
         return response()->json($kelompok);
     }

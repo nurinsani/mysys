@@ -3,25 +3,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use App\Jobs\ExportBukuBesarJob;
 use App\Models\Export;
 
-class BukuBesarKpController extends Controller
+class BukuBesarKpController extends BaseController
 {
     public function index()
     {
-        $roleId = auth()->user()->role_id;
-        $menus = Menu::whereNull('parent_id')
-            ->where(function ($q) use ($roleId) {
-                $q->where('role_id', $roleId)->orWhereNull('role_id');
-            })
-            ->with(['children' => function ($q) use ($roleId) {
-                $q->where('role_id', $roleId)->orWhereNull('role_id');
-            }])
-            ->orderBy('order')
-            ->get();
+        $menus = $this->getMenus();
 
         $title = 'Buku Besar';
         $exports = Export::latest()->take(5)->get();
@@ -39,7 +29,6 @@ class BukuBesarKpController extends Controller
         $tahun = $request->tahun;
         $all = $request->boolean('all_data');
 
-        // simpan ke tabel exports
         $exportId = DB::table('exports')->insertGetId([
             'file_name' => 'buku_besar_' . $no_perkiraan . '_' . now()->format('Ymd_His') . '.zip',
             'status' => 'processing',
@@ -47,7 +36,6 @@ class BukuBesarKpController extends Controller
             'updated_at' => now(),
         ]);
 
-        // kirim ke queue
         ExportBukuBesarJob::dispatch(
             $no_perkiraan,
             $tahun,
@@ -83,7 +71,6 @@ class BukuBesarKpController extends Controller
     {
         $exports = Export::latest()->take(5)->get();
 
-        // render partial untuk tabel
         return view('kp.buku_besar.export_list', compact('exports'));
     }
 

@@ -19,7 +19,7 @@ class ExportBukuBesarJob implements ShouldQueue
     protected $bulan;
     protected $all;
     protected $userEmail;
-    protected $exportId; // ID dari tabel exports
+    protected $exportId;
 
     public function __construct($no_perkiraan, $tahun = null, $bulan = null, $all = false, $userEmail = null, $exportId = null)
     {
@@ -102,7 +102,6 @@ class ExportBukuBesarJob implements ShouldQueue
 
         unlink($csvFile);
 
-        // ✅ Update status export ke 'done'
         if ($this->exportId) {
             DB::table('exports')
                 ->where('id', $this->exportId)

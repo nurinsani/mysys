@@ -6,18 +6,16 @@ use App\Models\Anggota;
 use App\Models\AnggotaDetail;
 use App\Models\ao;
 use App\Models\Kelompok;
-use App\Models\Menu;
 use App\Models\pembiayaan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class ViewDataController extends Controller
+class ViewDataController extends BaseController
 {
     public function data()
     {
-        // $anggota = DB::table('anggota')->latest()->get();
         $anggota = DB::table('anggota')
         ->join('pembiayaan', 'anggota.no', '=', 'pembiayaan.no_anggota')
         ->select(
@@ -50,14 +48,13 @@ class ViewDataController extends Controller
     {
         $title = 'View Data';
         $ao = ao::all();
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.view_data.index', compact('title', 'ao', 'menus'));
     }
 
     public function edit(string $id)
     {
         $title = 'Edit data Anggota';
-        // $anggota = Anggota::where('no', $id)->firstOrFail();
         $anggota = DB::table('anggota')
         ->join('pembiayaan', 'anggota.no', '=', 'pembiayaan.no_anggota')
         ->select(
@@ -68,7 +65,7 @@ class ViewDataController extends Controller
         $anggota_detail = AnggotaDetail::where('no_anggota', $id)->first();
         $ao = ao::all();
         $kelompok = Kelompok::all();
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.view_data.edit', compact('anggota','title','ao', 'kelompok', 'menus', 'anggota_detail'));
     }
 
@@ -78,7 +75,6 @@ class ViewDataController extends Controller
         $unit = Auth::user()->unit;
 
         try {
-            // Log data yang diterima
             Log::info('Data yang diterima:', $request->all());
     
             $anggota = Anggota::where('no', $id)->first();
@@ -139,13 +135,11 @@ class ViewDataController extends Controller
             return redirect()->route('view-data.index');
     
         } catch (\Throwable $th) {
-            // Log error yang terjadi
             Log::error('Error saat memperbarui data anggota:', [
                 'message' => $th->getMessage(),
                 'trace' => $th->getTraceAsString()
             ]);
-    
-            // Redirect dengan pesan error
+
             alert()->error('Gagal!', 'Gagal saat memperbarui data.');
             return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: ' . $th->getMessage()]);
         }

@@ -28,8 +28,10 @@
             <label>Kode Kelompok <span class="text-danger">*</span></label>
             <div class="row">
               <div class="col-sm-4">
-                <input type="text" class="form-control" id="kode_kelompok" name="kode_kelompok"
-                  placeholder="Masukkan Kode Kelompok" required>
+                <select class="form-control select2-ajax" id="kode_kelompok" name="kode_kelompok"
+                  style="width: 100%;">
+                  <!-- Opsi akan di-load via AJAX -->
+                </select>
               </div>
               <div class="col-sm-2">
                 <button type="submit" class="btn btn-primary">Cari</button>
@@ -57,7 +59,7 @@
             </thead>
             <tbody id="results-body">
               <tr>
-                <td colspan="10" class="text-center">Belum ada data</td>
+                <td colspan="10" class="text-center">Memuat data...</td>
               </tr>
             </tbody>
           </table>
@@ -70,28 +72,39 @@
 @push('scripts')
 <script>
   $(function () {
-    $('#search-form').on('submit', function (e) {
-      e.preventDefault();
-      const kodeKelompok = $('#kode_kelompok').val();
-
-      if (!kodeKelompok) {
-        Swal.fire({
-          title: 'Peringatan!',
-          text: 'Kode Kelompok harus diisi!',
-          icon: 'warning',
-          confirmButtonText: 'OK'
-        });
-        return;
+    $('.select2-ajax').select2({
+      placeholder: 'Cari Kode/Nama Kelompok...',
+      allowClear: true,
+      ajax: {
+        url: "{{ route('pembiayaan.cariKelompok') }}",
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            cari: params.term
+          };
+        },
+        processResults: function (data) {
+          return {
+            results: $.map(data, function (item) {
+              return {
+                id: item.code_kel,
+                text: item.code_kel + ' - ' + item.nama_kel
+              };
+            })
+          };
+        },
+        cache: true
       }
+    });
 
-      // Show loading state
+    function muatData(kodeKelompok, pesanKosong) {
       $('#results-body').html('<tr><td colspan="10" class="text-center">Loading...</td></tr>');
 
-      // Fetch data
       $.ajax({
         url: "{{ route('pembiayaan.data') }}",
         type: 'GET',
-        data: { kode_kelompok: kodeKelompok },
+        data: kodeKelompok ? { kode_kelompok: kodeKelompok } : {},
         success: function (response) {
           if (response.status === 'success' && response.data && response.data.length > 0) {
             let html = '';
@@ -115,7 +128,7 @@
             });
             $('#results-body').html(html);
           } else {
-            $('#results-body').html('<tr><td colspan="10" class="text-center">Tidak ada data ditemukan</td></tr>');
+            $('#results-body').html(`<tr><td colspan="10" class="text-center">${pesanKosong}</td></tr>`);
           }
         },
         error: function (xhr) {
@@ -123,6 +136,27 @@
           console.error('Error:', xhr);
         }
       });
+    }
+
+    // Saat halaman dibuka (belum ada pencarian kelompok), tampilkan data
+    // pengajuan pembiayaan yang masih pending di temp_akad_mus.
+    muatData(null, 'Belum ada pengajuan pembiayaan yang pending');
+
+    $('#search-form').on('submit', function (e) {
+      e.preventDefault();
+      const kodeKelompok = $('#kode_kelompok').val();
+
+      if (!kodeKelompok) {
+        Swal.fire({
+          title: 'Peringatan!',
+          text: 'Kode Kelompok harus diisi!',
+          icon: 'warning',
+          confirmButtonText: 'OK'
+        });
+        return;
+      }
+
+      muatData(kodeKelompok, 'Tidak ada data ditemukan');
     });
   });
 </script>

@@ -14,7 +14,7 @@ class simpanan_wajib extends Seeder
     public function run(): void
     {
         DB::table('simpanan_wajib')->insert([
-            'reff' => 'REF001',
+            'reff' => generate_reff('001'),
             'buss_date' => now(),
             'norek' => '00108612001',
             'unit' => '001',

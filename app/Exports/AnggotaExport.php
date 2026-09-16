@@ -3,50 +3,53 @@
 namespace App\Exports;
 
 use App\Models\Anggota;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class AnggotaExport implements FromCollection, WithHeadings
+class AnggotaExport implements FromQuery, WithHeadings
 {
-    /**
-    * @return \Illuminate\Support\Collection
-    */
-    public function collection()
+    public function __construct(protected string $unit)
     {
-        // return Anggota::all();
-        return Anggota::select(
-            'no',
-            'kode_kel',
-            'norek',
-            'tgl_join',
-            'cif',
-            'nama',
-            'unit',
-            'deal_type',
-            'alamat',
-            'desa',
-            'kecamatan',
-            'kota',
-            'rtrw',
-            'kode_pos',
-            'no_hp',
-            'hp_pasangan',
-            'kelamin',
-            'tempat_lahir',
-            'tgl_lahir',
-            'ktp',
-            'kewarganegaraan',
-            'status_menikah',
-            'agama',
-            'ibu_kandung',
-            'npwp',
-            'source_income',
-            'pendidikan',
-            'waris',
-            'pekerjaan_pasangan',
-            'cao',
-            'status'
-            )->get();
+    }
+
+    public function query(): Builder
+    {
+        return Anggota::query()
+            ->where('unit', $this->unit)
+            ->select(
+                'no',
+                'kode_kel',
+                'norek',
+                'tgl_join',
+                'cif',
+                'nama',
+                'unit',
+                'deal_type',
+                'alamat',
+                'desa',
+                'kecamatan',
+                'kota',
+                'rtrw',
+                'kode_pos',
+                'no_hp',
+                'hp_pasangan',
+                'kelamin',
+                'tempat_lahir',
+                'tgl_lahir',
+                'ktp',
+                'kewarganegaraan',
+                'status_menikah',
+                'agama',
+                'ibu_kandung',
+                'npwp',
+                'source_income',
+                'pendidikan',
+                'waris',
+                'pekerjaan_pasangan',
+                'cao',
+                'status'
+            );
     }
 
     public function headings(): array

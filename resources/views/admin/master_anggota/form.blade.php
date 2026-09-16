@@ -337,6 +337,24 @@
 
                         <div class="col-md-6">
                             <div class="form-group row">
+                                <span class="col-sm-4 col-form-label">Jenis Kelamin <span
+                                        class="text-danger">*</span></span>
+                                <div class="col-sm-7">
+                                    <select name="kelamin" id="kelamin"
+                                        class="form-control @error('kelamin') is-invalid @enderror">
+                                        <option hidden value="">-- PILIH JENIS KELAMIN --</option>
+                                        <option value="L" {{ old('kelamin') == 'L' ? 'selected' : '' }}>LAKI-LAKI
+                                        </option>
+                                        <option value="P" {{ old('kelamin') == 'P' ? 'selected' : '' }}>PEREMPUAN
+                                        </option>
+                                    </select>
+                                    @error('kelamin')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
                                 <span class="col-sm-4 col-form-label">Status Perkawinan <span
                                         class="text-danger">*</span></span>
                                 <div class="col-sm-7">

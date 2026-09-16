@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -10,12 +9,12 @@ use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 
-class JurnalUmumController extends Controller
+class JurnalUmumController extends BaseController
 {
     public function index()
     {
         $title = 'Jurnal Masuk';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         $kodeUnit = Auth::user()->unit;
         $random = strtoupper(Str::random(7));
@@ -46,7 +45,6 @@ class JurnalUmumController extends Controller
             DB::beginTransaction();
 
             foreach ($data as $item) {
-                // Tentukan nilai debet dan kredit berdasarkan posisi
                 $debet = $item['posisi'] === 'debet' ? $item['jumlah'] : 0;
                 $kredit = $item['posisi'] === 'kredit' ? $item['jumlah'] : 0;
 
@@ -62,6 +60,7 @@ class JurnalUmumController extends Controller
                     'tanggal_posting' => $item['tanggal_transaksi'],
                     'keterangan_posting' => 'Post',
                     'id_admin' => Auth::user()->id,
+                    'ip_address' => request()->ip(),
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
@@ -83,7 +82,6 @@ class JurnalUmumController extends Controller
     {
         $transaksi = $request->input('transaksi', []);
 
-        // pisahkan debet dan kredit
         $debet = collect($transaksi)->where('posisi', 'debet')->values()->all();
         $kredit = collect($transaksi)->where('posisi', 'kredit')->values()->all();
 

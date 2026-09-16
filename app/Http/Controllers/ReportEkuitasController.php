@@ -3,19 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Exports\EkuitasExport;
-use App\Models\Menu;
 use App\Models\ReportEkuitas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportEkuitasController extends Controller
+class ReportEkuitasController extends BaseController
 {
     public function index()
     {
         $title = 'Report Ekuitas';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $report_ekuitas = ReportEkuitas::all();
         return view('admin.report_ekuitas.index', compact('title', 'menus', 'report_ekuitas'));
     }
@@ -26,9 +25,8 @@ class ReportEkuitasController extends Controller
         $bulan = $request->jenis_transaksi;
         $tahun = $request->tahun;
         $today = Carbon::today()->format('Y-m-d');
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
-        // Mapping kode rekening
         $rekening_mapping = [
             'simpanan_pokok' => 3100000,
             'simpanan_wajib' => 3200000,
@@ -79,26 +77,23 @@ class ReportEkuitasController extends Controller
                 }
             }
         } else {
-            // Initialize empty data
             foreach ($rekening_mapping as $key => $kode) {
                 $data->{$key . '_awal'} = 0;
                 $data->{$key . '_akhir'} = 0;
             }
         }
 
-        // Hitung penambahan/pengurangan
         foreach ($rekening_mapping as $key => $kode) {
             $data->{$key . '_penambahan'} = $data->{$key . '_akhir'} - $data->{$key . '_awal'};
         }
 
-        // Hitung total
-        $total_saldo_awal = $data->simpanan_pokok_awal + $data->simpanan_wajib_awal + 
+        $total_saldo_awal = $data->simpanan_pokok_awal + $data->simpanan_wajib_awal +
                             $data->hibah_awal + $data->cadangan_awal + $data->shu_awal;
-        
-        $total_penambahan = $data->simpanan_pokok_penambahan + $data->simpanan_wajib_penambahan + 
+
+        $total_penambahan = $data->simpanan_pokok_penambahan + $data->simpanan_wajib_penambahan +
                             $data->hibah_penambahan + $data->cadangan_penambahan + $data->shu_penambahan;
-        
-        $total_saldo_akhir = $data->simpanan_pokok_akhir + $data->simpanan_wajib_akhir + 
+
+        $total_saldo_akhir = $data->simpanan_pokok_akhir + $data->simpanan_wajib_akhir +
                             $data->hibah_akhir + $data->cadangan_akhir + $data->shu_akhir;
 
         $tanggal_display = '';
@@ -128,7 +123,6 @@ class ReportEkuitasController extends Controller
         $tahun = $request->tahun;
         $today = Carbon::today()->format('Y-m-d');
 
-        // Mapping kode rekening
         $rekening_mapping = [
             'simpanan_pokok' => 3100000,
             'simpanan_wajib' => 3200000,
@@ -179,20 +173,17 @@ class ReportEkuitasController extends Controller
                 }
             }
         } else {
-            // Initialize empty data
             foreach ($rekening_mapping as $key => $kode) {
                 $data->{$key . '_awal'} = 0;
                 $data->{$key . '_akhir'} = 0;
             }
         }
 
-        // Hitung penambahan
         foreach ($rekening_mapping as $key => $kode) {
             $data->{$key . '_penambahan'} = $data->{$key . '_akhir'} - $data->{$key . '_awal'};
         }
 
-        // Hitung total
-        $total_saldo_awal = $data->simpanan_pokok_awal + $data->simpanan_wajib_awal + 
+        $total_saldo_awal = $data->simpanan_pokok_awal + $data->simpanan_wajib_awal +
                             $data->hibah_awal + $data->cadangan_awal + $data->shu_awal;
         
         $total_penambahan = $data->simpanan_pokok_penambahan + $data->simpanan_wajib_penambahan + 
@@ -208,10 +199,8 @@ class ReportEkuitasController extends Controller
             $tanggal_display = Carbon::today()->format('d-M-y');
         }
 
-        // Generate filename
         $filename = 'Laporan_Ekuitas_' . $tanggal_display . '.xlsx';
 
-        // Download menggunakan Export Class
         return Excel::download(
             new EkuitasExport($data, $tanggal_display, $total_saldo_awal, $total_penambahan, $total_saldo_akhir),
             $filename

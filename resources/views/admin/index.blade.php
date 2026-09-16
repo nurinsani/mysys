@@ -62,7 +62,7 @@
                         <!-- small box -->
                         <div class="small-box bg-danger">
                             <div class="inner">
-                                <h3>44 NoA</h3>
+                                <h3>{{ $jumlahPenunggak ?? '0' }} NoA</h3>
                                 <p>Penunggak</p>
                             </div>
                             <div class="icon">
@@ -76,7 +76,7 @@
                         <!-- small box -->
                         <div class="small-box bg-warning">
                             <div class="inner">
-                                <h3>1.000</h3>
+                                <h3>{{ $jumlahKelompok ?? '0' }}</h3>
                                 <p>Kelompok</p>
                             </div>
                             <div class="icon">
@@ -87,8 +87,56 @@
                     </div>
                     <!-- ./col -->
                 </div>
+
+                <div class="row">
+                    <div class="col-lg-4 col-6">
+                        <!-- small box -->
+                        <div class="small-box bg-primary">
+                            <div class="inner">
+                                <h3>Rp {{ number_format($totalSimpanan ?? 0, 0, ',', '.') }}</h3>
+                                <p>Total Simpanan</p>
+                            </div>
+                            <div class="icon">
+                                <i class="ion ion-cash"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ./col -->
+                    <div class="col-lg-4 col-6">
+                        <!-- small box -->
+                        <div class="small-box bg-secondary">
+                            <div class="inner">
+                                <h3>Rp {{ number_format($shuYtd ?? 0, 0, ',', '.') }}</h3>
+                                <p>SHU YTD <small>(hasil Hitung SHU terakhir)</small></p>
+                            </div>
+                            <div class="icon">
+                                <i class="ion ion-social-usd"></i>
+                            </div>
+                            <a href="{{ route('hitung-shu.index') }}" class="small-box-footer">Detail <i class="fas fa-arrow-circle-right"></i></a>
+                        </div>
+                    </div>
+                    <!-- ./col -->
+                    <div class="col-lg-4 col-6">
+                        <!-- small box -->
+                        <div class="small-box bg-dark">
+                            <div class="inner">
+                                <h3>{{ $transaksiHariIni->jumlah ?? 0 }} Transaksi</h3>
+                                <p>
+                                    Hari Ini
+                                    &mdash;
+                                    Debet Rp {{ number_format($transaksiHariIni->total_debet ?? 0, 0, ',', '.') }} /
+                                    Kredit Rp {{ number_format($transaksiHariIni->total_kredit ?? 0, 0, ',', '.') }}
+                                </p>
+                            </div>
+                            <div class="icon">
+                                <i class="ion ion-clock"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ./col -->
+                </div>
             </div>
-            
+
         </div>
         <!-- /.card-body -->
 

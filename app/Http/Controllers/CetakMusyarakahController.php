@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Menu;
 
-class CetakMusyarakahController extends Controller
+class CetakMusyarakahController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Musyarakah';
 
         return view("admin.cetak_musyarakah.index", compact("menus", "title"));
@@ -18,7 +17,7 @@ class CetakMusyarakahController extends Controller
 
     public function hasil(Request $request)
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Musyarakah';
 
         $request->validate([

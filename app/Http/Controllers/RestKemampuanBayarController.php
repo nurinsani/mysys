@@ -3,23 +3,25 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use App\Models\temp_akad_mus;
 use App\Models\branch;
 use App\Models\Pembiayaan;
+use App\Repositories\Contracts\KelompokRepositoryInterface;
 use Carbon\Carbon;
 
-class RestKemampuanBayarController extends Controller
+class RestKemampuanBayarController extends BaseController
 {
+    public function __construct(protected KelompokRepositoryInterface $kelompokRepository)
+    {
+    }
 
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $pembiayaan = DB::table('pembiayaan')
         ->selectRaw('SUM(os - saldo_margin) as os, COUNT(cif) as noa')
         ->first();
-        //dd($pembiayaan);
         $title = 'Setoran Lima Persen';
 
         return view('admin.rest_kemampuan_bayar.index',compact('menus','pembiayaan','title'));
@@ -174,16 +176,7 @@ class RestKemampuanBayarController extends Controller
 
     public function getSetKelompok(Request $request)
     {
-        $search = $request->q;
-        $kelompok = DB::table('kelompok')
-        ->select('code_kel', 'nama_kel')
-        ->where('code_unit', Auth()->user()->unit)
-        ->when($search, function ($query, $search) {
-            return $query->where('code_kel', 'like', "%$search%")
-                         ->orWhere('nama_kel', 'like', "%$search%");
-        })
-        ->limit(20)
-        ->get();
+        $kelompok = $this->kelompokRepository->search($request->q, auth()->user()->unit, 20);
 
         return response()->json($kelompok);
     }

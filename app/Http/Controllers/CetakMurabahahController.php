@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
-class CetakMurabahahController extends Controller
+class CetakMurabahahController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Murabahah';
 
         return view('admin.cetak_murabahah.index', compact('menus', 'title'));
@@ -22,9 +21,8 @@ class CetakMurabahahController extends Controller
         $code_kel = $request->input('code_kel');
         $tgl_murab = $request->input('tgl_murab');
 
-        // Ambil data berdasarkan tanggal
         $data = DB::table('temp_akad_mus')
-            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no') // Relasi antar tabel
+            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no')
             ->select(
                 'temp_akad_mus.tgl_murab',
                 'temp_akad_mus.code_kel',
@@ -55,12 +53,11 @@ class CetakMurabahahController extends Controller
         $code_kel = $request->input('code_kel');
         $tgl_murab = $request->input('tgl_murab');
 
-        // Ambil data berdasarkan tanggal
         $data = DB::table('temp_akad_mus')
-            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no') // Relasi antar tabel
-            ->join('kelompok', 'temp_akad_mus.code_kel', '=', 'kelompok.code_kel') // Relasi antar tabel
-            ->join('ao', 'kelompok.cao', '=', 'ao.cao') // Relasi antar tabel
-            ->join('mm', 'ao.atasan', '=', 'mm.nik') // Relasi antar tabel
+            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no')
+            ->join('kelompok', 'temp_akad_mus.code_kel', '=', 'kelompok.code_kel')
+            ->join('ao', 'kelompok.cao', '=', 'ao.cao')
+            ->join('mm', 'ao.atasan', '=', 'mm.nik')
             ->select(
                 'temp_akad_mus.*',
                 'anggota.*',
@@ -78,12 +75,9 @@ class CetakMurabahahController extends Controller
             return redirect()->back();
         }
 
-        // Generate PDF
         $pdf = PDF::loadView('admin.cetak_murabahah.pdf', compact('data', 'tgl_murab'))
         ->setPaper('a4', 'portrait');
 
-        // Tampilkan preview di browser
         return $pdf->stream('Murabahah-' . $tgl_murab . '.pdf');
-        // dd($data);
     }
 }

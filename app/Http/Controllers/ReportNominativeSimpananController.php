@@ -3,18 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Exports\SimpananExport;
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportNominativeSimpananController extends Controller
+class ReportNominativeSimpananController extends BaseController
 {
     public function index()
     {
         $title = 'Report Nominative Simpanan';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         return view('admin.report_nominative_simpanan.index', compact('menus', 'title'));
     }
@@ -29,7 +28,6 @@ class ReportNominativeSimpananController extends Controller
         ->select(
             'unit',
             DB::raw('COUNT(DISTINCT norek) as total_noa'),
-            // DB::raw('SUM(kredit) - SUM(debet) as total_saldo')
             DB::raw('COUNT(DISTINCT norek) as total_noa'),
             DB::raw('SUM(kredit) as total_kredit'),
             DB::raw('SUM(debet) as total_debet'),

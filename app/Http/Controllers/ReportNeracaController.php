@@ -3,17 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exports\NeracaExport;
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportNeracaController extends Controller
+class ReportNeracaController extends BaseController
 {
     public function index()
     {
         $title = 'Neraca';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $data = $this->buildData(Auth::user()->unit);
 
         return view('admin.report_neraca.index', array_merge(compact('title', 'menus'), $data));

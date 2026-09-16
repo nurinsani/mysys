@@ -2,27 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class KpController extends Controller
+class KpController extends BaseController
 {
     public function index()
     {
-    $roleId = auth()->user()->role_id;
-    $menus = Menu::whereNull('parent_id')
-    ->where(function ($query) use ($roleId) {
-        $query->where('role_id', $roleId)
-              ->orWhereNull('role_id');
-    })
-    ->with(['children' => function ($query) use ($roleId) {
-        $query->where('role_id', $roleId)
-              ->orWhereNull('role_id');
-    }])
-    ->orderBy('order')
-    ->get();
+    $menus = $this->getMenus();
 
         $pembiayaan = DB::table('pembiayaan')
             ->selectRaw('SUM(os - saldo_margin) as os, COUNT(cif) as noa')

@@ -62,6 +62,7 @@ use App\Http\Controllers\ReportMobcolController;
 use App\Http\Controllers\BukuBesarController;
 use App\Http\Controllers\KpController;
 use App\Http\Controllers\ReportPpapController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BukuBesarKpController;
 use App\Http\Controllers\ListJurnalKpController;
 use App\Http\Controllers\ReportNominatifPembiayaanKpController;
@@ -78,15 +79,18 @@ Route::group(['middleware' => 'guest'], function () {
 Route::group(['middleware' => ['auth', 'role:1,2,3,4']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/redirect', [RedirectController::class, 'check']);
+    Route::get('/redirect', [RedirectController::class, 'check']);
 });
 
 
 // untuk Admin
 Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::get('/admin', [AdminController::class, 'index']);
+    Route::get('/admin/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::get('/realisasi_wakalah', [RealisasiWakalahController::class, 'index']);
     Route::POST('/proses_realisasi_wakalah', [RealisasiWakalahController::class, 'realisasiWakalah']);
     Route::get('realisasi_wakalah/getData', [RealisasiWakalahController::class, 'getData']);
+    Route::get('realisasi_wakalah/cari-kelompok', [RealisasiWakalahController::class, 'cariKelompok']);
     Route::get('/cetak/cs', [CetakCsController::class, 'index'])->name('cetak.cs.index');
     Route::get('/cetak/kode_ao', [CetakCsController::class, 'cariAo'])->name('cetak.kode.ao');
     Route::get('/cetak/pdf_cs', [CetakCsController::class, 'pdfCs'])->name('pdfCs');
@@ -103,6 +107,7 @@ Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::get('/realisasi/murabahah', [RealisasiMurabahahController::class, 'index'])->name('realisasi_murabahah');
     Route::get('/realisasi/murabahah/search', [RealisasiMurabahahController::class, 'search'])->name('realisasi.search');
     Route::post('/realisasi/murabahah/update', [RealisasiMurabahahController::class, 'updateStatus'])->name('realisasi.update');
+    Route::get('/realisasi/murabahah/cari-kelompok', [RealisasiMurabahahController::class, 'cariKelompok'])->name('realisasiMurabahah.cariKelompok');
 
     Route::get('/kelompok/data', [KelompokController::class, 'data'])->name('kelompok.data');
     Route::resource('kelompok', KelompokController::class);
@@ -124,15 +129,17 @@ Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::post('/cetak/kartu-angsuran/pdf', [CetakKartuAngsuranController::class, 'cetakPDF'])->name('cetakkartuAngsuran.pdf');
 
     Route::get('/anggota/data', [AnggotaController::class, 'data'])->name('anggota.data');
+    Route::get('anggota/cari', [AnggotaController::class, 'cari'])->name('anggota.cari');
     Route::get('anggota/get-kelompok-data', [AnggotaController::class, 'getKelompokData']);
     Route::post('anggota/cari-ktp', [AnggotaController::class, 'cariKtp']);
     Route::get('/anggota/export', [AnggotaController::class, 'export'])->name('anggota.export');
-    Route::resource('anggota', AnggotaController::class);
+    Route::resource('anggota', AnggotaController::class)->except(['show', 'destroy']);
     Route::get('anggota/get-kelompok/{cao}', [AnggotaController::class, 'getKelompokByCao']);
 
     Route::get('/get-anggota/{cif}', [KelompokController::class, 'getAnggotaByCif']);
 
     Route::get('/pembiayaan', [PembiayaanController::class, 'index'])->name('pembiayaan.index');
+    Route::get('/pembiayaan/cari-kelompok', [PembiayaanController::class, 'cariKelompok'])->name('pembiayaan.cariKelompok');
     Route::get('/pembiayaan/data', [PembiayaanController::class, 'data'])->name('pembiayaan.data');
     Route::post('/pembiayaan/add/{cif}', [PembiayaanController::class, 'addPembiayaan'])->name('pembiayaan.add');
     Route::get('/pembiayaan/edit/{cif}', [PembiayaanController::class, 'edit'])->name('pembiayaan.edit');

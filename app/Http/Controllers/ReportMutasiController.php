@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use App\Models\PembiayaanDetail;
 use App\Models\simpanan;
 use Illuminate\Http\Request;
@@ -10,12 +9,12 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Database\Seeders\PembiayaanDetailSeeder;
 
-class ReportMutasiController extends Controller
+class ReportMutasiController extends BaseController
 {
     public function index()
     {
         $title = 'Repoer Mutasi';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         return view('admin.report_mutasi.index', compact('title', 'menus'));
     }
 
@@ -51,16 +50,12 @@ class ReportMutasiController extends Controller
         ->orderBy('tgl_bayar', 'asc')
         ->get();
 
-            // dd($anggota);
-
         if (!$anggota) {
             return abort(404, 'Data tidak ditemukan');
         }
 
-        // Pilih view berdasarkan jenis
         $view = $jenis == 1 ? 'admin/report_mutasi/cetak_simpanan' : 'admin/report_mutasi/cetak_kartu_angsuran';
 
-        // Generate PDF
         $pdf = Pdf::loadView($view, compact('anggota', 'mutasiSimpanan', 'mutasiKartuAngsuran'));
         return $pdf->stream('mutasi_' . $cif . '.pdf');
     }

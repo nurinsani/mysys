@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Exports\PembiayaanExport;
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -11,12 +10,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportNominativePembiayaanController extends Controller
+class ReportNominativePembiayaanController extends BaseController
 {
     public function index()
     {
         $title = 'Report Nominative Pembiayaan';
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
 
         return view('admin.report_nominative_pembiayaan.index', compact('menus', 'title'));
     }
@@ -74,7 +73,6 @@ class ReportNominativePembiayaanController extends Controller
 
         $data = $query->get();
         
-        // Debug: Log hasil
         Log::info('Query Result', [
             'count' => $data->count(),
             'data' => $data

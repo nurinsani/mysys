@@ -12,10 +12,6 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class SimpananPokokSheet implements FromCollection, WithTitle, WithHeadings, WithStyles
 {
-    /**
-    * @return \Illuminate\Support\Collection
-    */
-
     protected $status;
     protected $bulan;
     protected $tahun;
@@ -29,10 +25,9 @@ class SimpananPokokSheet implements FromCollection, WithTitle, WithHeadings, Wit
 
     public function collection()
     {
-        $startDate = Carbon::now()->startOfMonth()->toDateString(); // bulan ini awal
-        $endDate   = Carbon::now()->endOfMonth()->toDateString();   // bulan ini akhir
+        $startDate = Carbon::now()->startOfMonth()->toDateString();
+        $endDate   = Carbon::now()->endOfMonth()->toDateString();
 
-        // cari rentang bulan lalu
         $startLastMonth = Carbon::now()->subMonth()->startOfMonth()->toDateString();
         $endLastMonth   = Carbon::now()->subMonth()->endOfMonth()->toDateString();
 
@@ -45,9 +40,6 @@ class SimpananPokokSheet implements FromCollection, WithTitle, WithHeadings, Wit
                 END) as saldo_awal
             ")
             ->value('saldo_awal');
-
-
-        // dd($saldoAwal);
 
         $query = DB::table('simpanan_pokok')
             ->leftJoin('anggota', 'simpanan_pokok.norek', '=', 'anggota.no')
@@ -130,11 +122,11 @@ class SimpananPokokSheet implements FromCollection, WithTitle, WithHeadings, Wit
             1 => [
                 'font' => [
                     'bold' => true,
-                    'color' => ['argb' => 'FFFFFFFF'] // white text
+                    'color' => ['argb' => 'FFFFFFFF']
                 ],
                 'fill' => [
                     'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'FF008000'] // green
+                    'startColor' => ['argb' => 'FF008000']
                 ],
                 'alignment' => [
                     'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER

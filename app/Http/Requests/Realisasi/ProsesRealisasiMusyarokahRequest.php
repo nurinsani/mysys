@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Http\Requests\Realisasi;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class ProsesRealisasiMusyarokahRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'ids' => 'required|array|min:1',
+        ];
+    }
+}

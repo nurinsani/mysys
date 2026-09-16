@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Menu;
 
-class CetakLaRisywahController extends Controller
+class CetakLaRisywahController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak La Risywah';
 
         return view("admin.cetak_larisywah.index", compact("menus", "title"));
@@ -18,7 +17,7 @@ class CetakLaRisywahController extends Controller
 
     public function hasil(Request $request)
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak La Risywah';
 
         $request->validate([
@@ -28,10 +27,9 @@ class CetakLaRisywahController extends Controller
         ]);
 
         $tanggalCetak = \Carbon\Carbon::createFromFormat('Y-m-d', $request->tanggal)->format('Y-m-d');
-        $kodeKelompok = $request->kode_kelompok; // Match form input name
+        $kodeKelompok = $request->kode_kelompok;
         $unit = $request->unit;
 
-        // Ngambil dari table akad Mus
         $results = DB::table('temp_akad_mus')
             ->where('tgl_akad', $tanggalCetak)
             ->where('code_kel', $kodeKelompok)
@@ -39,7 +37,6 @@ class CetakLaRisywahController extends Controller
             ->where('status_app', 'MUSYARAKAH')
             ->get();
 
-        // Error handling
         if ($results->isEmpty()) {
             if ($request->ajax()) {
                 return response()->json([
@@ -52,7 +49,6 @@ class CetakLaRisywahController extends Controller
             return redirect()->back();
         }
 
-        // AJAX response
         if ($request->ajax()) {
             $iframeUrl = route('pdf.generateLaRisywah', [
                 'feature' => 'cetak_larisywah',

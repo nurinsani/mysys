@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class CetakSimpananLimaPersenController extends Controller
+class CetakSimpananLimaPersenController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Cetak Simpanan 5%';
 
         return view('admin.cetak_simpanan_5_persen.index', compact('menus', 'title'));
@@ -22,9 +21,8 @@ class CetakSimpananLimaPersenController extends Controller
         $code_kel = $request->input('code_kel');
         $tgl_akad = $request->input('tgl_akad');
 
-        // query data berdasarkan kode kelompok dan tanggal akad
         $data = DB::table('temp_akad_mus')
-            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no') // Relasi antar tabel
+            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no')
             ->select(
                 'temp_akad_mus.*',
                 'anggota.*',
@@ -34,8 +32,6 @@ class CetakSimpananLimaPersenController extends Controller
             ->whereDate('temp_akad_mus.tgl_akad', $tgl_akad)
             ->get();
 
-        // dd($data);
-
         return response()->json(['data' => $data]);
     }
 
@@ -44,9 +40,8 @@ class CetakSimpananLimaPersenController extends Controller
         $code_kel = $request->input('code_kel');
         $tgl_akad = $request->input('tgl_akad');
 
-        // query data berdasarkan kode kelompok dan tanggal akad yang ingin di cetak
         $data = DB::table('temp_akad_mus')
-            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no') // Relasi antar tabel anggota
+            ->join('anggota', 'temp_akad_mus.no_anggota', '=', 'anggota.no')
             ->select(
                 'temp_akad_mus.*',
                 'anggota.*',
@@ -58,7 +53,7 @@ class CetakSimpananLimaPersenController extends Controller
         
         $data_kel = DB::table('temp_akad_mus')
             ->join('kelompok', 'temp_akad_mus.code_kel', '=', 'kelompok.code_kel')
-            ->join('ao', 'kelompok.cao', '=', 'ao.cao') // Join ke tabel ao
+            ->join('ao', 'kelompok.cao', '=', 'ao.cao')
             ->select(
                 'temp_akad_mus.tgl_akad',
                 'kelompok.code_kel',
@@ -70,21 +65,16 @@ class CetakSimpananLimaPersenController extends Controller
             ->whereDate('temp_akad_mus.tgl_akad', $tgl_akad)
             ->first();
 
-        // dd($data_kel);
-
         if ($data->isEmpty()) {
 
             alert()->error('Oops!', 'Data tidak di temukan!');
             return redirect()->back();
         }
 
-        // generate PDF
         $pdf = PDF::loadView('admin.cetak_simpanan_5_persen.pdf', compact('data', 'tgl_akad', 'data_kel'))
         ->setPaper('a4', 'portrait');
 
-        // tampilkan preview di browser
         return $pdf->stream('Simpanan 5 persen - ' . $tgl_akad . '.pdf');
-        // dd($data);
     }
 
 }

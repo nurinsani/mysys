@@ -3,59 +3,68 @@
 namespace App\Http\Controllers;
 
 use App\Exports\AnggotaExport;
+use App\Http\Requests\Anggota\StoreAnggotaRequest;
+use App\Http\Requests\Anggota\UpdateAnggotaRequest;
 use App\Models\Anggota;
 use App\Models\AnggotaDetail;
 use App\Models\ao;
 use App\Models\Kelompok;
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
-use function Illuminate\Log\log;
 
-class AnggotaController extends Controller
+class AnggotaController extends BaseController
 {
     public function data()
     {
-        $anggota = DB::table('anggota')->latest()->get();
+        $anggota = DB::table('anggota')->latest();
 
         return datatables()
             ->of($anggota)
             ->addIndexColumn()
-            ->addColumn('aksi', function($anggota) {
+            ->addColumn('aksi', function ($anggota) {
                 return '
-                <a href="'. route('anggota.edit', $anggota->no) .'" class="btn btn-sm btn-warning">Edit</a>
+                <a href="'.route('anggota.edit', $anggota->no).'" class="btn btn-sm btn-warning">Edit</a>
                 ';
             })
             ->rawColumns(['aksi'])
             ->make(true);
     }
-    
-    /**
-     * Display a listing of the resource.
-     */
+
+    public function cari(Request $request)
+    {
+        $cari = $request->input('cari');
+
+        $results = DB::table('anggota')
+            ->select('cif', 'nama', 'no_hp')
+            ->where('cif', 'like', '%'.$cari.'%')
+            ->orWhere('nama', 'like', '%'.$cari.'%')
+            ->limit(10)
+            ->get();
+
+        return response()->json($results);
+    }
+
     public function index()
     {
         $title = 'Master Anggota';
         $ao = ao::all();
-        $anggota = Anggota::all();
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
-        return view('admin.master_anggota.index', compact('title', 'ao', 'menus', 'anggota'));
+        $menus = $this->getMenus();
+
+        return view('admin.master_anggota.index', compact('title', 'ao', 'menus'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $title = 'Input data Anggota';
         $ao = ao::all();
         $kelompok = Kelompok::all();
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
+
         return view('admin.master_anggota.create', compact('title', 'ao', 'menus', 'kelompok'));
     }
 
@@ -63,226 +72,153 @@ class AnggotaController extends Controller
     {
 
         $kelompok = DB::table('kelompok')
-        ->join('ao', 'kelompok.cao', '=', 'ao.cao') // Relasi ke tabel ao
-        ->where('kelompok.code_kel', $request->code_kel)
-        ->select(
-            'kelompok.cao',
-            'kelompok.no_tlp',
-            'ao.nama_ao' // Ambil nama_ao dari tabel ao
-        )
-        ->first();
+            ->join('ao', 'kelompok.cao', '=', 'ao.cao')
+            ->where('kelompok.code_kel', $request->code_kel)
+            ->select(
+                'kelompok.cao',
+                'kelompok.no_tlp',
+                'ao.nama_ao'
+            )
+            ->first();
 
         if ($kelompok) {
             return response()->json([
                 'nama_ao' => $kelompok->nama_ao,
-                'no_tlp' => $kelompok->no_tlp
+                'no_tlp' => $kelompok->no_tlp,
             ]);
         }
-        
+
         return response()->json([]);
     }
 
     public function cariKtp(Request $request)
     {
-        // Validasi input NIK
         $request->validate([
-            'nik' => 'required|string'
+            'nik' => 'required|string',
         ]);
 
         $nik = $request->input('nik');
 
-        // Lakukan request ke API eksternal
-        $response = Http::get("http://mobcol.nurinsani.co.id/apimobcol/rmcKtp.php?ktp={$nik}");
+        try {
+            $response = Http::timeout(10)->get(config('services.mobcol.ktp_url'), ['ktp' => $nik]);
+        } catch (\Illuminate\Http\Client\ConnectionException|\GuzzleHttp\Exception\GuzzleException $e) {
+            Log::error('Koneksi ke layanan cek KTP gagal: '.$e->getMessage());
 
-        // Jika request gagal
-        if (!$response->successful()) {
             return response()->json([
-                'error' => 'Data tidak ditemukan'
+                'error' => 'Layanan cek KTP sedang tidak bisa diakses. Coba lagi nanti.',
+            ], 503);
+        }
+
+        if (! $response->successful()) {
+            return response()->json([
+                'error' => 'Data tidak ditemukan',
             ], 404);
         }
 
-        // Ambil data dari response
         $data = $response->json();
 
-        // Kembalikan data sebagai response JSON
         return response()->json($data);
     }
 
     public function getKelompokByCao($cao)
     {
         $kelompok = Kelompok::where('cao', $cao)->get();
+
         return response()->json($kelompok);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-
-    public function store(Request $request)
+    public function store(StoreAnggotaRequest $request)
     {
-        // dd($request);
         $unit = Auth::user()->unit;
 
-        $request->validate([
-            'cao' => 'required',
-            'kode_kel' => 'required',
-            'nama'   => 'required',
-            'alamat' => 'required',
-            'rtrw' => 'required',
-            'desa' => 'required',
-            'kecamatan' => 'required',
-            'kota' => 'required',
-            'tgl_lahir' => [
-                'required',
-                'date',
-                function ($attribute, $value, $fail) {
-                    $umur = Carbon::parse($value)->age; // Hitung umur
-                    if ($umur > 60) {
-                        $fail('Umur tidak boleh lebih dari 60 tahun.'); // Validasi umur
-                    }
-                },
-            ],
-            'ktp' => [
-                'required',
-                'digits:16',
-                function ($attribute, $value, $fail) use ($unit) {
-                    $existingAnggota = Anggota::where('ktp', $value)->first();
-                    if ($existingAnggota && $existingAnggota->unit == $unit) {
-                        $fail('NIK sudah ada di unit lain.');
-                    }
-                },
-            ],
-            'kewarganegaraan' => 'required',
-            'status_menikah' => 'required',
-            'agama' => 'required',
-            'no_hp' => 'required|min:11',
-            'hp_pasangan' => 'required|min:11',
-            'ibu_kandung' => 'required',
-            'pendidikan' => 'required',
-            'tempat_lahir' => 'required',
-            'waris' => 'required',
-            'pekerjaan_pasangan' => 'required',
-            'kode_pos' => 'required',
-        ], [
-            'cao.required' => 'Nama AO tidak boleh kosong.',
-            'kode_kel.required' => 'Nama Kelompok tidak boleh kosong.',
-            'nama.required' => 'Nama tidak boleh kosong.',
-            'alamat.required' => 'Alamat tidak boleh kosong.',
-            'rtrw.required' => 'RT/RW tidak boleh kosong.',
-            'desa.required' => 'Desa tidak boleh kosong.',
-            'kecamatan.required' => 'Kecamatan tidak boleh kosong.',
-            'kota.required' => 'Kabupaten tidak boleh kosong.',
-            'kode_pos.required' => 'Kode Pos tidak boleh kosong.',
-            'tgl_lahir.required' => 'Tanggal Lahir tidak boleh kosong.',
-            'ktp.required' => 'NIK tidak boleh kosong.',
-            'ktp.digits' => 'NIK harus tepat 16 digit.',
-            'kewarganegaraan.required' => 'Kewarganegaraan tidak boleh kosong.',
-            'status_menikah.required' => 'Status Menikah tidak boleh kosong.',
-            'agama.required' => 'Agama tidak boleh kosong.',
-            'no_hp.required' => 'No. Hp tidak boleh kosong.',
-            'no_hp.min' => 'No Hp minimal 11 karakter.',
-            'hp_pasangan.required' => 'No Hp Pasangan tidak boleh kosong.',
-            'hp_pasangan.min' => 'No Hp Pasangan minimal 11 karakter.',
-            'ibu_kandung.required' => 'Ibu Kandung tidak boleh kosong.',
-            'pendidikan.required' => 'Pendidikan tidak boleh kosong.',
-            'tempat_lahir.required' => 'Tempat Lahir tidak boleh kosong.',
-            'waris.required' => 'Waris tidak boleh kosong.',
-            'pekerjaan_pasangan.required' => 'Pekerjaan Pasangan tidak boleh kosong.',
-        ]);
-
         try {
-            // Log data yang diterima
             Log::info('Data yang diterima:', $request->all());
 
-            // Generate no anggota
-            // $unit = Auth::user()->unit;
-            $date = Carbon::now()->format('ymd'); // Format tanggal: TahunBulanTanggal (20231025)
-            // $lastAnggota = Anggota::whereDate('created_at', Carbon::today())->latest()->first();
-            $lastAnggota = Anggota::latest()->first(); // Ambil record terakhir
+            $anggota = DB::transaction(function () use ($request, $unit) {
+                $date = Carbon::now()->format('ymd');
 
-            // Nomor urut
-            $sequence = $lastAnggota ? intval(substr($lastAnggota->no, -3)) + 1 : 1;
-            $sequenceFormatted = str_pad($sequence, 3, '0', STR_PAD_LEFT); // Format urutan (001, 002, dst.)
+                // Di-scope ke unit + hari ini, dan dikunci (lockForUpdate) supaya 2
+                // input anggota di unit & hari yang sama nyaris bersamaan tidak
+                // menghasilkan no_anggota yang sama (primary key collision).
+                $lastAnggota = Anggota::where('unit', $unit)
+                    ->whereDate('created_at', Carbon::today())
+                    ->lockForUpdate()
+                    ->latest()
+                    ->first();
 
-            // Gabungkan no anggota
-            $noAnggota = "{$unit}{$date}{$sequenceFormatted}";
+                $sequence = $lastAnggota ? intval(substr($lastAnggota->no, -3)) + 1 : 1;
+                $sequenceFormatted = str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
-            $anggota = Anggota::create([
-                'no' => $noAnggota,
-                'unit' => Auth::user()->unit,
-                'kode_kel' => strtoupper($request->kode_kel),
-                'norek' => $noAnggota,
-                'tgl_join' => Carbon::now(),
-                'cif' => strtoupper($request->cif),
-                'nama' => strtoupper($request->nama),
-                'deal_type' => '1',
-                'alamat' => strtoupper($request->alamat),
-                'desa' => strtoupper($request->desa),
-                'kecamatan' => strtoupper($request->kecamatan),
-                'kota' => strtoupper($request->kota),
-                'rtrw' => strtoupper($request->rtrw),
-                'no_hp' => strtoupper($request->no_hp),
-                'hp_pasangan' => strtoupper($request->hp_pasangan),
-                'kelamin' => 'P',
-                'tgl_lahir' => $request->tgl_lahir,
-                'ktp' => strtoupper($request->ktp),
-                'kewarganegaraan' => strtoupper($request->kewarganegaraan),
-                'status_menikah' => strtoupper($request->status_menikah),
-                'agama' => strtoupper($request->agama),
-                'ibu_kandung' => strtoupper($request->ibu_kandung),
-                'npwp' => 0,
-                'source_income' => 1,
-                'pendidikan' => strtoupper($request->pendidikan),
-                'tempat_lahir' => strtoupper($request->tempat_lahir),
-                'id_expired' => 0,
-                'waris' => strtoupper($request->waris),
-                'cao' => strtoupper($request->cao),
-                'userid' => Auth::id(),
-                'status' => 'ANGGOTA',
-                'pekerjaan_pasangan' => strtoupper($request->pekerjaan_pasangan),
-                'kode_pos' => strtoupper($request->kode_pos),
-            ]);
-    
-            AnggotaDetail::create([
-                'no_anggota' => $noAnggota,
-                'alamat_domisili' => strtoupper($request->alamat_domisili ?? $request->alamat),
-                'rtrw_domisili' => strtoupper($request->rtrw_domisili ?? $request->rtrw),
-                'desa_domisili' => strtoupper($request->desa_domisili ?? $request->desa),
-                'kecamatan_domisili' => strtoupper($request->kecamatan_domisili ?? $request->kecamatan),
-                'kota_domisili' => strtoupper($request->kota_domisili ?? $request->kota),
-                'kode_pos_domisili' => strtoupper($request->kode_pos_domisili ?? $request->kode_pos),
-            ]);
+                $noAnggota = "{$unit}{$date}{$sequenceFormatted}";
+
+                $anggota = Anggota::create([
+                    'no' => $noAnggota,
+                    'unit' => $unit,
+                    'kode_kel' => strtoupper($request->kode_kel),
+                    'norek' => $noAnggota,
+                    'tgl_join' => Carbon::now(),
+                    'cif' => strtoupper($request->cif),
+                    'nama' => strtoupper($request->nama),
+                    'deal_type' => '1',
+                    'alamat' => strtoupper($request->alamat),
+                    'desa' => strtoupper($request->desa),
+                    'kecamatan' => strtoupper($request->kecamatan),
+                    'kota' => strtoupper($request->kota),
+                    'rtrw' => strtoupper($request->rtrw),
+                    'no_hp' => strtoupper($request->no_hp),
+                    'hp_pasangan' => strtoupper($request->hp_pasangan),
+                    'kelamin' => strtoupper($request->kelamin),
+                    'tgl_lahir' => $request->tgl_lahir,
+                    'ktp' => strtoupper($request->ktp),
+                    'kewarganegaraan' => strtoupper($request->kewarganegaraan),
+                    'status_menikah' => strtoupper($request->status_menikah),
+                    'agama' => strtoupper($request->agama),
+                    'ibu_kandung' => strtoupper($request->ibu_kandung),
+                    'npwp' => 0,
+                    'source_income' => 1,
+                    'pendidikan' => strtoupper($request->pendidikan),
+                    'tempat_lahir' => strtoupper($request->tempat_lahir),
+                    'id_expired' => 0,
+                    'waris' => strtoupper($request->waris),
+                    'cao' => strtoupper($request->cao),
+                    'cao_promotor' => strtoupper($request->cao),
+                    'userid' => Auth::id(),
+                    'status' => 'ANGGOTA',
+                    'pekerjaan_pasangan' => strtoupper($request->pekerjaan_pasangan),
+                    'kode_pos' => strtoupper($request->kode_pos),
+                ]);
+
+                AnggotaDetail::create([
+                    'no_anggota' => $noAnggota,
+                    'alamat_domisili' => strtoupper($request->alamat_domisili ?? $request->alamat),
+                    'rtrw_domisili' => strtoupper($request->rtrw_domisili ?? $request->rtrw),
+                    'desa_domisili' => strtoupper($request->desa_domisili ?? $request->desa),
+                    'kecamatan_domisili' => strtoupper($request->kecamatan_domisili ?? $request->kecamatan),
+                    'kota_domisili' => strtoupper($request->kota_domisili ?? $request->kota),
+                    'kode_pos_domisili' => strtoupper($request->kode_pos_domisili ?? $request->kode_pos),
+                ]);
+
+                return $anggota;
+            });
 
             Log::info('Data anggota berhasil disimpan:', $anggota->toArray());
-        
+
             alert()->success('Berhasil!', 'Data Berhasil Disimpan.');
+
             return redirect()->route('anggota.index');
 
         } catch (\Throwable $th) {
-            // Log error yang terjadi
             Log::error('Error saat menyimpan data anggota:', [
                 'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString()
+                'trace' => $th->getTraceAsString(),
             ]);
 
-            // Redirect dengan pesan error
             alert()->error('Gagal!', 'Gagal saat menyimpan data.');
-            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: ' . $th->getMessage()]);
+
+            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: '.$th->getMessage()]);
         }
     }
 
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
         $title = 'Edit data Anggota';
@@ -290,24 +226,21 @@ class AnggotaController extends Controller
         $anggota_detail = AnggotaDetail::where('no_anggota', $id)->first();
         $ao = ao::all();
         $kelompok = Kelompok::all();
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
-        return view('admin.master_anggota.edit', compact('anggota','title','ao', 'kelompok', 'menus', 'anggota_detail'));
+        $menus = $this->getMenus();
+
+        return view('admin.master_anggota.edit', compact('anggota', 'title', 'ao', 'kelompok', 'menus', 'anggota_detail'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(UpdateAnggotaRequest $request, string $id)
     {
 
         $unit = Auth::user()->unit;
 
         try {
-            // Log data yang diterima
             Log::info('Data yang diterima:', $request->all());
-    
+
             $anggota = Anggota::where('no', $id)->firstOrFail();
-    
+
             $anggota->update([
                 'unit' => $unit,
                 'kode_kel' => strtoupper($request->kode_kel),
@@ -321,7 +254,7 @@ class AnggotaController extends Controller
                 'rtrw' => strtoupper($request->rtrw),
                 'no_hp' => strtoupper($request->no_hp),
                 'hp_pasangan' => strtoupper($request->hp_pasangan),
-                'kelamin' => 'P',
+                'kelamin' => strtoupper($request->kelamin),
                 'tgl_lahir' => $request->tgl_lahir,
                 'ktp' => strtoupper($request->ktp),
                 'kewarganegaraan' => strtoupper($request->kewarganegaraan),
@@ -363,35 +296,27 @@ class AnggotaController extends Controller
                     'kode_pos_domisili' => strtoupper($request->kode_pos_domisili ?? $request->kode_pos),
                 ]);
             }
-    
+
             Log::info('Data anggota berhasil diperbarui:', $anggota->toArray());
-        
+
             alert()->success('Berhasil!', 'Data Berhasil Diperbarui.');
+
             return redirect()->route('anggota.index');
-    
+
         } catch (\Throwable $th) {
-            // Log error yang terjadi
             Log::error('Error saat memperbarui data anggota:', [
                 'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString()
+                'trace' => $th->getTraceAsString(),
             ]);
-    
-            // Redirect dengan pesan error
-            alert()->error('Gagal!', 'Gagal saat memperbarui data.');
-            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: ' . $th->getMessage()]);
-        }
-    }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+            alert()->error('Gagal!', 'Gagal saat memperbarui data.');
+
+            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: '.$th->getMessage()]);
+        }
     }
 
     public function export()
     {
-        return Excel::download(new AnggotaExport, 'anggota.xlsx');
+        return Excel::download(new AnggotaExport(Auth::user()->unit), 'anggota.xlsx');
     }
 }

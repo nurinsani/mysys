@@ -3,20 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Menu;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\GenericExport;
-use App\Exports\BukuBesarExport;
 use App\Exports\BukuBesarMultiSheetExport;
 
-class BukuBesarController extends Controller
+class BukuBesarController extends BaseController
 {
        public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $data = DB::table('pull_data')->get();
-        //dd($pembiayaan);
         $title = 'Buku Besar';
 
         return view('admin.buku_besar.index',compact('menus','title','data'));
@@ -32,7 +28,7 @@ class BukuBesarController extends Controller
         $tahun        = $request->tahun;
         $coa          = $request->kode_rekening;
         $all_data     = $request->all_data;
-         $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+         $menus = $this->getMenus();
           $title = 'Buku Besar';
 
 
@@ -57,29 +53,25 @@ class BukuBesarController extends Controller
 
     }
 
+    /**
+     * Sesi 2.6 — di atas ambang ini, export dialihkan ke CSV streaming
+     * (streamCsv()) bukan ditolak. Alasan: PhpSpreadsheet (dipakai untuk
+     * .xlsx) selalu menyimpan representasi SEMUA sel di memori sebelum
+     * menulis file, apa pun strategi chunk-nya — sudah dites, ~45rb baris
+     * aman, ~452rb baris bikin proses PHP mati kehabisan memori. CSV yang
+     * ditulis langsung (fputcsv + DB cursor(), tanpa lewat PhpSpreadsheet
+     * sama sekali) tidak punya batasan itu — memori konstan berapa pun
+     * jumlah barisnya. Trade-off: kehilangan styling Excel (bold, merge,
+     * warna) untuk kasus yang melebihi ambang ini.
+     */
+    private const MAKS_BARIS_EXPORT_XLSX = 200000;
+
     public function download(Request $request, $no_perkiraan)
    {
         $tahun = $request->get('tahun');
         $bulan = $request->get('bulan');
         $all   = $request->get('all_data');
 
-        // ambil transaksi
-        $query = DB::table('tabel_transaksi')
-            ->where('kode_rekening', $no_perkiraan);
-
-        if (!$all) {
-            if ($tahun) {
-                $query->whereYear('tanggal_transaksi', $tahun);
-            }
-            if ($bulan) {
-                $query->whereMonth('tanggal_transaksi', $bulan);
-            }
-        }
-
-        $transactions = $query->orderBy('tanggal_transaksi', 'asc')
-            ->get(['tanggal_transaksi','kode_transaksi','kode_rekening','keterangan_transaksi','debet','kredit']);
-
-        // ambil info master akun
         $akun = DB::table('tabel_master')->where('kode_rekening', $no_perkiraan)->first();
 
         $info = [
@@ -93,7 +85,6 @@ class BukuBesarController extends Controller
 
 
 
-        // tentukan judul
         $title = "Laporan Buku Besar: {$no_perkiraan}";
         if (!$all && $bulan && $tahun) {
             $title .= " - Periode {$bulan}/{$tahun}";
@@ -103,10 +94,77 @@ class BukuBesarController extends Controller
             $title .= " - Semua Data";
         }
 
+        $jumlahBaris = DB::table('tabel_transaksi')
+            ->where('kode_rekening', $no_perkiraan)
+            ->when(!$all && $tahun, fn($q) => $q->whereYear('tanggal_transaksi', $tahun))
+            ->when(!$all && $bulan, fn($q) => $q->whereMonth('tanggal_transaksi', $bulan))
+            ->count();
+
+        if ($jumlahBaris > self::MAKS_BARIS_EXPORT_XLSX) {
+            return $this->streamCsv($no_perkiraan, $tahun, $bulan, $all, $info, $title);
+        }
+
         return Excel::download(
-            new BukuBesarMultiSheetExport($transactions, $info, $title),
+            new BukuBesarMultiSheetExport($no_perkiraan, $tahun, $bulan, $all, $info, $title),
             "buku_besar_{$no_perkiraan}.xlsx"
         );
+    }
+
+    /**
+     * Streaming CSV murni (fputcsv + DB cursor()) — tanpa PhpSpreadsheet
+     * sama sekali, jadi tidak ada batas jumlah baris yang aman secara
+     * memori. Saldo berjalan dihitung sambil jalan, sama seperti versi
+     * .xlsx, cuma tidak ada styling.
+     */
+    private function streamCsv(string $no_perkiraan, ?string $tahun, ?string $bulan, $all, array $info, string $title)
+    {
+        $fileName = "buku_besar_{$no_perkiraan}.csv";
+
+        return response()->streamDownload(function () use ($no_perkiraan, $tahun, $bulan, $all, $info, $title) {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, ['KOPERASI SIMPAN PINJAM PEMBIAYAAN SYARIAH NURINSANI']);
+            fputcsv($out, [$title]);
+            fputcsv($out, ['UNIT : ' . $info['unit']]);
+            fputcsv($out, []);
+            fputcsv($out, ['No Perkiraan', $info['kode_rekening']]);
+            fputcsv($out, ['Nama Perkiraan', $info['nama_rekening']]);
+            fputcsv($out, ['Saldo Awal', $info['saldo_awal']]);
+            fputcsv($out, ['Saldo Akhir', $info['saldo_akhir']]);
+            fputcsv($out, []);
+            fputcsv($out, ['Tanggal', 'Nomor Bukti', 'Kode Rekening', 'Keterangan', 'Debet', 'Kredit', 'Saldo']);
+
+            $saldo = $info['saldo_awal'];
+
+            DB::table('tabel_transaksi')
+                ->where('kode_rekening', $no_perkiraan)
+                ->when(!$all && $tahun, fn($q) => $q->whereYear('tanggal_transaksi', $tahun))
+                ->when(!$all && $bulan, fn($q) => $q->whereMonth('tanggal_transaksi', $bulan))
+                ->orderBy('tanggal_transaksi', 'asc')
+                ->select('tanggal_transaksi', 'kode_transaksi', 'kode_rekening', 'keterangan_transaksi', 'debet', 'kredit')
+                ->cursor()
+                ->each(function ($row) use ($out, $info, &$saldo) {
+                    if ($info['normal'] == 'debet') {
+                        $saldo = $saldo + $row->debet - $row->kredit;
+                    } else {
+                        $saldo = $saldo - $row->debet + $row->kredit;
+                    }
+
+                    fputcsv($out, [
+                        $row->tanggal_transaksi,
+                        $row->kode_transaksi,
+                        $row->kode_rekening,
+                        $row->keterangan_transaksi,
+                        $row->debet,
+                        $row->kredit,
+                        $saldo,
+                    ]);
+                });
+
+            fclose($out);
+        }, $fileName, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function suggest(Request $request)

@@ -710,5 +710,15 @@ class MenuSeeder extends Seeder
             'role_id' => 2,
         ]);
 
+        Menu::create([
+            'name' => 'Activity Log',
+            'icon' => 'nav-icon fas fa-history',
+            'parent_id' => null,
+            'url' => '/admin/activity-log',
+            'left' => 'null',
+            'order' => 46,
+            'role_id' => 1,
+        ]);
+
     }
 }

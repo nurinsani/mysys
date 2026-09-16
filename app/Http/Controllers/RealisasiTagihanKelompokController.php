@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Str;
 
-class RealisasiTagihanKelompokController extends Controller
+class RealisasiTagihanKelompokController extends BaseController
 {
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')->with('children')->orderBy('order')->get();
+        $menus = $this->getMenus();
         $title = 'Realisasi Tagihan Kelompok';
         return view('admin.realisasi_tagihan_kelompok.index', compact('menus', 'title'));
     }
@@ -95,9 +94,6 @@ class RealisasiTagihanKelompokController extends Controller
                 $keterangan = 'Setor Tagihan ' . $pembiayaan->nama . ' ' . $pembiayaan->cif;
                 $ketSimpanan = 'Setoran an ' . $pembiayaan->nama;
 
-                $timestamp = date('YmdHis');
-
-                // insert ke tabel simpanan
                 DB::table('simpanan')->insert([
                     'buss_date' => $tanggal,
                     'norek' => $pembiayaan->norek,
@@ -109,7 +105,7 @@ class RealisasiTagihanKelompokController extends Controller
                     'kredit' => $pembiayaan->angsuran,
                     'userid' => $user_id,
                     'ket' => $ketSimpanan,
-                    'reff' => $unit . $timestamp . strtoupper(\Str::random(2)),
+                    'reff' => generate_reff($unit),
                     'cao' => $pembiayaan->cao,
                     'blok' => '2',
                     'kode_transaksi' => $noTransaksi,
@@ -128,7 +124,7 @@ class RealisasiTagihanKelompokController extends Controller
                     'kredit' => $twm,
                     'userid' => $user_id,
                     'ket' => $ketSimpanan,
-                    'reff' => $unit . $timestamp . strtoupper(\Str::random(2)),
+                    'reff' => generate_reff($unit),
                     'cao' => $pembiayaan->cao,
                     'blok' => '2',
                     'kode_transaksi' => $noTransaksi,
@@ -147,7 +143,7 @@ class RealisasiTagihanKelompokController extends Controller
                     'kredit' => $saldo_twm,
                     'userid' => $user_id,
                     'ket' => $ketSimpanan,
-                    'reff' => $unit . $timestamp . strtoupper(\Str::random(2)),
+                    'reff' => generate_reff($unit),
                     'cao' => $pembiayaan->cao,
                     'blok' => '2',
                     'kode_transaksi' => $noTransaksi,
@@ -166,16 +162,14 @@ class RealisasiTagihanKelompokController extends Controller
                     'kredit' => 0,
                     'userid' => $user_id,
                     'ket' => $ketSimpanan,
-                    'reff' => $unit . $timestamp . strtoupper(\Str::random(2)),
+                    'reff' => generate_reff($unit),
                     'cao' => $pembiayaan->cao,
                     'blok' => '2',
                     'kode_transaksi' => $noTransaksi,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
-                // end insert ke tabel simpanan
 
-                // insert ke tabel rek_loan
                 DB::table('rek_loan')->insert([
                     'tgl_realisasi' => $tanggal,
                     'unit' => $unit,
@@ -192,7 +186,6 @@ class RealisasiTagihanKelompokController extends Controller
                     'updated_at' => now()
                 ]);
 
-                // insert ke tabel tunggakan
                 DB::table('tunggakan')->insert([
                     'tgl_tunggak' => $tanggal,
                     'norek' => $pembiayaan->norek,
@@ -210,7 +203,6 @@ class RealisasiTagihanKelompokController extends Controller
                     'updated_at' => now()
                 ]);
 
-                // junal
                 $BuatJurnal = [
                     [
                         'unit' => $unit,
@@ -224,6 +216,7 @@ class RealisasiTagihanKelompokController extends Controller
                         'tanggal_posting' => $tanggal,
                         'keterangan_posting' => '',
                         'id_admin' => $user_id,
+                        'ip_address' => request()->ip(),
                         'created_at' => now(),
                         'updated_at' => now()
                     ],
@@ -239,6 +232,7 @@ class RealisasiTagihanKelompokController extends Controller
                         'tanggal_posting' => $tanggal,
                         'keterangan_posting' => '',
                         'id_admin' => $user_id,
+                        'ip_address' => request()->ip(),
                         'created_at' => now(),
                         'updated_at' => now()
                     ],
@@ -254,6 +248,7 @@ class RealisasiTagihanKelompokController extends Controller
                         'tanggal_posting' => $tanggal,
                         'keterangan_posting' => '',
                         'id_admin' => $user_id,
+                        'ip_address' => request()->ip(),
                         'created_at' => now(),
                         'updated_at' => now()
                     ],
@@ -269,6 +264,7 @@ class RealisasiTagihanKelompokController extends Controller
                         'tanggal_posting' => $tanggal,
                         'keterangan_posting' => '',
                         'id_admin' => $user_id,
+                        'ip_address' => request()->ip(),
                         'created_at' => now(),
                         'updated_at' => now()
                     ]
@@ -285,8 +281,6 @@ class RealisasiTagihanKelompokController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Realisasi berhasil diproses',
-                // 'no_transaksi' => $noTransaksi,
-                // 'total_rows' => count($BuatJurnal)
             ]);
             
         } catch (\Exception $e) {
