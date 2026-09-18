@@ -44,15 +44,13 @@
 
                     <div class="form-group">
                         <label>CIF Ketua</label>
-                        <select name="cif" id="cif" class="form-control select2-ajax-cif" style="width: 100%;" required>
-                            <option hidden value="">-- Pilih CIF Ketua --</option>
-                        </select>
+                        <input type="text" class="form-control uppercase" name="cif" id="cif" required>
                         <span class="help-block with-errors text-danger"></span>
                     </div>
 
                     <div class="form-group">
                         <label>No Telp Ketua</label>
-                        <input type="text" class="form-control" name="no_tlp" id="no_tlp" required readonly>
+                        <input type="text" class="form-control" name="no_tlp" id="no_tlp" required>
                         <span class="help-block with-errors text-danger"></span>
                     </div>
                 </div>

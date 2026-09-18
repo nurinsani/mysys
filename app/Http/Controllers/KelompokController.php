@@ -71,7 +71,7 @@ class KelompokController extends BaseController
                 'alamat' => 'required',
                 'cao' => 'required',
                 'cif' => 'required',
-                'no_tlp' => 'required|max:13|min:11',
+                'no_tlp' => 'required|max:16',
             ]);
 
             $unit = Auth::user()->unit;
@@ -94,10 +94,15 @@ class KelompokController extends BaseController
             Kelompok::create($validated);
 
             return response()->json(['message' => 'Data berhasil disimpan'], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validasi gagal: ' . implode(', ', \Illuminate\Support\Arr::flatten($e->errors())),
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Error saat menyimpan data: ' . $e->getMessage());
 
-            return response()->json(['message' => 'Terjadi kesalahan'], 500);
+            return response()->json(['message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
         }
     }
 
