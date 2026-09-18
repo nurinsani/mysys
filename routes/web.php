@@ -109,6 +109,7 @@ Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::post('/realisasi/murabahah/update', [RealisasiMurabahahController::class, 'updateStatus'])->name('realisasi.update');
     Route::get('/realisasi/murabahah/cari-kelompok', [RealisasiMurabahahController::class, 'cariKelompok'])->name('realisasiMurabahah.cariKelompok');
 
+    Route::get('/kelompok/next-code', [KelompokController::class, 'getNextCode'])->name('kelompok.nextCode');
     Route::get('/kelompok/data', [KelompokController::class, 'data'])->name('kelompok.data');
     Route::resource('kelompok', KelompokController::class);
 

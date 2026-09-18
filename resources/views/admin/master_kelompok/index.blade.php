@@ -133,17 +133,28 @@
             $('#modal-form form')[0].reset();
             $('#modal-form form').attr('action', url);
             $('#modal-form [name=_method]').val('post');
-            $('#modal-form [name=code_kel]').focus();
+            $('#modal-form [name=code_kel]').attr('readonly', false);
+            $('#modal-form [name=code_unit]').val('{{ Auth::user()->unit }}');
+
+            // Ambil kode kelompok otomatis format (unit)-(nomor urut)
+            $.get('{{ route("kelompok.nextCode") }}', function(response) {
+                if (response && response.code_kel) {
+                    $('#modal-form [name=code_kel]').val(response.code_kel);
+                }
+            });
+
+            $('#modal-form [name=nama_kel]').focus();
         }
 
         function editForm(url) {
             $('#modal-form').modal('show');
-            $('#modal-form .modal-title').text('Edit Produk');
+            $('#modal-form .modal-title').text('Edit Kelompok');
 
             $('#modal-form form')[0].reset();
             $('#modal-form form').attr('action', url);
             $('#modal-form [name=_method]').val('put');
-            $('#modal-form [name=code_kel]').focus();
+            $('#modal-form [name=code_kel]').attr('readonly', true);
+            $('#modal-form [name=nama_kel]').focus();
 
             $.get(url)
             .done((response) => {

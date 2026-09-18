@@ -13,10 +13,11 @@
                 <div class="modal-body">
 
                     <div class="form-group">
-                        <label>Kode Unit</label>
-                        <input type="text" class="form-control" name="code_unit" id="code_unit" value="{{ Auth::user()->unit }}" readonly required>
+                        <label>Kode Kelompok</label>
+                        <input type="text" class="form-control uppercase" name="code_kel" id="code_kel" value="{{ App\Http\Controllers\KelompokController::generateNextCodeKelompok() }}" placeholder="Contoh: 001-00001" required>
                         <span class="help-block with-errors text-danger"></span>
                     </div>
+                    <input type="hidden" name="code_unit" id="code_unit" value="{{ Auth::user()->unit }}">
 
                     <div class="form-group">
                         <label>Nama Kelompok</label>

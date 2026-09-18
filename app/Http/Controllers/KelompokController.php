@@ -57,6 +57,31 @@ class KelompokController extends BaseController
         ], 404);
     }
 
+    public static function generateNextCodeKelompok($unit = null)
+    {
+        $unit = $unit ?? (Auth::check() ? Auth::user()->unit : null) ?? '001';
+        $allKelompoks = Kelompok::withTrashed()->where('code_kel', 'LIKE', $unit.'-%')->pluck('code_kel');
+        $maxSeq = 0;
+        foreach ($allKelompoks as $ck) {
+            $parts = explode('-', $ck);
+            if (isset($parts[1]) && is_numeric($parts[1])) {
+                $num = intval($parts[1]);
+                if ($num > $maxSeq) {
+                    $maxSeq = $num;
+                }
+            }
+        }
+        $nextSeq = $maxSeq + 1;
+        return $unit . '-' . str_pad($nextSeq, 5, '0', STR_PAD_LEFT);
+    }
+
+    public function getNextCode(Request $request)
+    {
+        $unit = $request->code_unit ?? (Auth::check() ? Auth::user()->unit : null) ?? '001';
+        $code = self::generateNextCodeKelompok($unit);
+        return response()->json(['code_kel' => $code]);
+    }
+
     public function create()
     {
         //
@@ -66,7 +91,8 @@ class KelompokController extends BaseController
     {
         try {
             $validated = $request->validate([
-                'code_unit' => 'required',
+                'code_kel' => 'nullable|string|max:10|unique:kelompok,code_kel',
+                'code_unit' => 'nullable|string|max:10',
                 'nama_kel' => 'required|string|max:255',
                 'alamat' => 'required',
                 'cao' => 'required',
@@ -74,17 +100,15 @@ class KelompokController extends BaseController
                 'no_tlp' => 'required|max:16',
             ]);
 
-            $unit = Auth::user()->unit;
-            $lastKelompok = Kelompok::where('code_kel', 'LIKE', $unit.'-%')
-                                ->latest()
-                                ->first();
+            $unit = $request->code_unit ?? (Auth::check() ? Auth::user()->unit : null) ?? '001';
 
-            $sequence = $lastKelompok ? intval(substr($lastKelompok->code_kel, -4)) + 1 : 1;
-            $sequenceFormatted = str_pad($sequence, 4, '0', STR_PAD_LEFT);
+            if ($request->filled('code_kel')) {
+                $validated['code_kel'] = strtoupper($request->code_kel);
+            } else {
+                $validated['code_kel'] = self::generateNextCodeKelompok($unit);
+            }
 
-            $validated['code_kel'] = $request->code_unit . '-' . $sequenceFormatted;
-
-            $validated['code_unit'] = strtoupper($validated['code_unit']);
+            $validated['code_unit'] = strtoupper($unit);
             $validated['nama_kel'] = strtoupper($validated['nama_kel']);
             $validated['alamat'] = strtoupper($validated['alamat']);
             $validated['cao'] = strtoupper($validated['cao']);
