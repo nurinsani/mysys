@@ -71,11 +71,11 @@
                                             placeholder="Masukkan No Identitas">
                                             
                                             <div class="input-group-append">
-                                                <a href="#" class="btn btn-primary" onclick="cariKtp()"
-                                                id="nikInput">
-                                                <i class="fas fa-search"></i>
-                                            </a>
-                                        </div>
+                                                <button type="button" class="btn btn-primary" onclick="cariKtp()"
+                                                    id="btnCariKtp" title="Cari No Identitas">
+                                                    <i class="fas fa-search" id="iconCariKtp"></i>
+                                                </button>
+                                            </div>
                                         @error('ktp')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror

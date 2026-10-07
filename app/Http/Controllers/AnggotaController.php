@@ -28,7 +28,7 @@ class AnggotaController extends BaseController
             ->addIndexColumn()
             ->addColumn('aksi', function ($anggota) {
                 return '
-                <a href="'.route('anggota.edit', $anggota->no).'" class="btn btn-sm btn-warning">Edit</a>
+                <a href="' . route('anggota.edit', $anggota->no) . '" class="btn btn-sm btn-warning">Edit</a>
                 ';
             })
             ->rawColumns(['aksi'])
@@ -41,8 +41,8 @@ class AnggotaController extends BaseController
 
         $results = DB::table('anggota')
             ->select('cif', 'nama', 'no_hp')
-            ->where('cif', 'like', '%'.$cari.'%')
-            ->orWhere('nama', 'like', '%'.$cari.'%')
+            ->where('cif', 'like', '%' . $cari . '%')
+            ->orWhere('nama', 'like', '%' . $cari . '%')
             ->limit(10)
             ->get();
 
@@ -70,20 +70,20 @@ class AnggotaController extends BaseController
 
     public function getKelompokData(Request $request)
     {
-
         $kelompok = DB::table('kelompok')
-            ->join('ao', 'kelompok.cao', '=', 'ao.cao')
+            ->leftJoin('anggota', 'kelompok.cif', '=', 'anggota.cif')
             ->where('kelompok.code_kel', $request->code_kel)
             ->select(
                 'kelompok.cao',
+                'kelompok.cif',
                 'kelompok.no_tlp',
-                'ao.nama_ao'
+                'anggota.nama as nama_ketua'
             )
             ->first();
 
         if ($kelompok) {
             return response()->json([
-                'nama_ao' => $kelompok->nama_ao,
+                'nama_ketua' => $kelompok->nama_ketua ?? '',
                 'no_tlp' => $kelompok->no_tlp,
             ]);
         }
@@ -101,8 +101,8 @@ class AnggotaController extends BaseController
 
         try {
             $response = Http::timeout(10)->get(config('services.mobcol.ktp_url'), ['ktp' => $nik]);
-        } catch (\Illuminate\Http\Client\ConnectionException|\GuzzleHttp\Exception\GuzzleException $e) {
-            Log::error('Koneksi ke layanan cek KTP gagal: '.$e->getMessage());
+        } catch (\Illuminate\Http\Client\ConnectionException | \GuzzleHttp\Exception\GuzzleException $e) {
+            Log::error('Koneksi ke layanan cek KTP gagal: ' . $e->getMessage());
 
             return response()->json([
                 'error' => 'Layanan cek KTP sedang tidak bisa diakses. Coba lagi nanti.',
@@ -206,7 +206,6 @@ class AnggotaController extends BaseController
             alert()->success('Berhasil!', 'Data Berhasil Disimpan.');
 
             return redirect()->route('anggota.index');
-
         } catch (\Throwable $th) {
             Log::error('Error saat menyimpan data anggota:', [
                 'message' => $th->getMessage(),
@@ -215,7 +214,7 @@ class AnggotaController extends BaseController
 
             alert()->error('Gagal!', 'Gagal saat menyimpan data.');
 
-            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: '.$th->getMessage()]);
+            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: ' . $th->getMessage()]);
         }
     }
 
@@ -302,7 +301,6 @@ class AnggotaController extends BaseController
             alert()->success('Berhasil!', 'Data Berhasil Diperbarui.');
 
             return redirect()->route('anggota.index');
-
         } catch (\Throwable $th) {
             Log::error('Error saat memperbarui data anggota:', [
                 'message' => $th->getMessage(),
@@ -311,7 +309,7 @@ class AnggotaController extends BaseController
 
             alert()->error('Gagal!', 'Gagal saat memperbarui data.');
 
-            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: '.$th->getMessage()]);
+            return redirect()->back()->withInput()->with(['error' => 'Terjadi kesalahan: ' . $th->getMessage()]);
         }
     }
 

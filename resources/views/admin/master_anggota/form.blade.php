@@ -68,7 +68,7 @@
                                         class="text-danger">*</span></span>
                                 <div class="col-sm-7">
                                     <input type="text" class="form-control" style="text-transform: uppercase;"
-                                        id="nama_ao" value="" readonly>
+                                        id="nama_ketua" value="" readonly>
                                 </div>
                             </div>
 
@@ -95,10 +95,10 @@
                                             placeholder="Masukkan No Identitas" style="text-transform: uppercase;">
 
                                         <div class="input-group-append">
-                                            <a href="#" class="btn btn-primary" onclick="cariKtp()"
-                                                id="nikInput">
-                                                <i class="fas fa-search"></i>
-                                            </a>
+                                            <button type="button" class="btn btn-primary" onclick="cariKtp()"
+                                                id="btnCariKtp" title="Cari No Identitas">
+                                                <i class="fas fa-search" id="iconCariKtp"></i>
+                                            </button>
                                         </div>
                                         @error('ktp')
                                             <div class="invalid-feedback">{{ $message }}</div>
