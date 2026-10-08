@@ -13,7 +13,7 @@
                     data-accordion="false">
                     @foreach ($menus as $menu)
                         <li class="nav-item">
-                            <a href="{{ $menu->url }}" class="nav-link">
+                            <a href="{{ $menu->url ? url($menu->url) : '#' }}" class="nav-link">
                                 <i class="{{ $menu->icon }}"></i>
                                 <p>
                                     {{ $menu->name }}
@@ -27,7 +27,7 @@
                                 <ul class="nav nav-treeview">
                                     @foreach ($menu->children as $child)
                                         <li class="nav-item">
-                                            <a href="{{ $child->url }}" class="nav-link">
+                                            <a href="{{ $child->url ? url($child->url) : '#' }}" class="nav-link">
                                                 <i class="{{ $child->icon }}"></i>
                                                 <p>{{ $child->name }}</p>
                                             </a>
