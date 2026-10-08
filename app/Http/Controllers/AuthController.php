@@ -25,13 +25,13 @@ class AuthController extends Controller
 
             $role = auth()->user()->role_id;
 
-            if ($role === 1) {
+            if ($role == 1) {
                 // Admin
                 return redirect()->intended('/admin');
-            } elseif ($role === 2) {
+            } elseif ($role == 2) {
                 // AL
                 return redirect()->intended('/al');
-            } elseif ($role === 3) {
+            } elseif ($role == 3) {
                 // AH
                 return redirect()->intended('/ah');
             } else {

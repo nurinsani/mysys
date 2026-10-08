@@ -3,7 +3,7 @@
 @section('contents')
     <div class="container">
         <h2>Selamat Datang AL</h2>
-        <form action="/logout" method="post">
+        <form action="{{ url('/logout') }}" method="post">
             @csrf
             <button type="submit" class="btn btn-primary">Logout</button>
         </form>

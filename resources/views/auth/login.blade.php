@@ -18,7 +18,7 @@
 <div class="d-flex justify-content-center align-items-center vh-100">
     <div class="card" style="width: 25rem;">
         <div class="login-logo text-center">
-            <a href="/login">
+            <a href="{{ url('/') }}">
                 <img src="{{ asset('/assets/img/logo-ni.png') }}" width="150px" alt="">
             </a>
         </div>
@@ -35,7 +35,7 @@
 
 
         <div class="card-body">
-            <form method="post" action="/">
+            <form method="post" action="">
                 @csrf
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
