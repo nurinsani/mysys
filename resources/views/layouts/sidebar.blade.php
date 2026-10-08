@@ -40,7 +40,7 @@
                     
 
                     <li class="nav-item mt-3">
-                        <form action="/logout" method="post">
+                        <form action="{{ url('/logout') }}" method="post">
                             @csrf
                             <button type="submit" class="nav-link btn btn-danger text-white w-100">
                                 <i class="fas fa-sign-out-alt"></i> Keluar
