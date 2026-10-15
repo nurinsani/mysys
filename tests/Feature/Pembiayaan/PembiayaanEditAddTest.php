@@ -6,6 +6,7 @@ use App\Models\Anggota;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
@@ -72,6 +73,11 @@ class PembiayaanEditAddTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('admin.master_pembiayaan.edit');
+        $response->assertSee('id="preview-pengajuan"', false);
+        $response->assertSee('id="preview-disetujui"', false);
+        $response->assertSee('Dokumen Lama');
+        $response->assertSee('Dokumen Lanjutan');
+        $response->assertSee('Dokumen Baru');
     }
 
     public function test_edit_pembiayaan_redirect_jika_cif_milik_unit_lain(): void
@@ -173,5 +179,206 @@ class PembiayaanEditAddTest extends TestCase
         $this->assertStringContainsString('(CIF: CIFLOG1)', $log->description);
         $properties = json_decode($log->properties, true);
         $this->assertSame('CIFLOG1', $properties['cif'] ?? null);
+    }
+
+    public function test_simpan_pembiayaan_mengupdate_data_anggota_dan_domisili_jika_ada_perubahan(): void
+    {
+        $admin = User::where('email', 'admin@ni')->first();
+        $anggota = $this->buatAnggotaMentah($admin->unit, 'CIFUPD1');
+
+        $param = DB::table('param_biaya')->first();
+        $this->assertNotNull($param);
+
+        $payload = [
+            'unit' => $admin->unit,
+            'jenis_pembiayaan' => 1,
+            'no_rek' => $anggota->no,
+            'cif' => $anggota->cif,
+            'pengajuan' => (int) $param->pla,
+            'tenor' => (int) $param->jw,
+            'disetujui' => (int) $param->pla,
+            'tgl_wakalah' => '2027-01-04',
+            'tgl_akad' => '2027-01-04',
+            'bidang_usaha' => 'DAGANG',
+            'keterangan_usaha' => 'TOKO KELONTONG',
+            'param_tanggal' => '2027-01-04',
+            'cao' => 'CAO002',
+            'kode_kel' => 'KELBARU',
+            'nama' => 'NAMA TERBARU',
+            'tgl_lahir' => '1992-05-15',
+            'alamat' => 'JL MERDEKA NO 10',
+            'desa' => 'SUKAMAJU',
+            'kecamatan' => 'CIBINONG',
+            'kota' => 'BOGOR',
+            'rtrw' => '002/003',
+            'kode_pos' => '16911',
+            'no_hp' => '089988776655',
+            'tempat_lahir' => 'BANDUNG',
+            'status_menikah' => 'MENIKAH',
+            'agama' => 'ISLAM',
+            'pendidikan' => 'S1',
+            'ibu_kandung' => 'IBU BARU',
+            'alamat_domisili' => 'JL DOMISILI NO 5',
+            'desa_domisili' => 'DESA DOMISILI',
+            'kecamatan_domisili' => 'KEC DOMISILI',
+            'kota_domisili' => 'KOTA DOMISILI',
+            'rtrw_domisili' => '005/006',
+            'kode_pos_domisili' => '16912',
+        ];
+
+        $response = $this->postJson(route('pembiayaan.add', $anggota->cif), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'success']);
+
+        // Verifikasi anggota terupdate
+        $anggota->refresh();
+        $this->assertSame('NAMA TERBARU', $anggota->nama);
+        // Kode AO dan Kode Kelompok tidak di-update pada anggota
+        $this->assertSame('CAO001', $anggota->cao);
+        $this->assertSame('CAO001', $anggota->cao_promotor);
+        $this->assertSame('KELTEST', $anggota->kode_kel);
+        $this->assertSame('JL MERDEKA NO 10', $anggota->alamat);
+        $this->assertSame('SUKAMAJU', $anggota->desa);
+        $this->assertSame('CIBINONG', $anggota->kecamatan);
+        $this->assertSame('BOGOR', $anggota->kota);
+        $this->assertSame('002/003', $anggota->rtrw);
+        $this->assertSame('16911', $anggota->kode_pos);
+        $this->assertSame('089988776655', $anggota->no_hp);
+        $this->assertSame('BANDUNG', $anggota->tempat_lahir);
+        $this->assertSame('1992-05-15', $anggota->tgl_lahir);
+        // Ibu kandung dan No Rekening tidak di-update pada anggota (readonly)
+        $this->assertSame('IBU', $anggota->ibu_kandung);
+        $this->assertSame($anggota->no, $anggota->norek);
+
+        // Verifikasi anggota detail terupdate
+        $detail = DB::table('anggota_details')->where('no_anggota', $anggota->no)->first();
+        $this->assertNotNull($detail);
+        $this->assertSame('JL DOMISILI NO 5', $detail->alamat_domisili);
+        $this->assertSame('DESA DOMISILI', $detail->desa_domisili);
+        $this->assertSame('KEC DOMISILI', $detail->kecamatan_domisili);
+        $this->assertSame('KOTA DOMISILI', $detail->kota_domisili);
+        $this->assertSame('005/006', $detail->rtrw_domisili);
+        $this->assertSame('16912', $detail->kode_pos_domisili);
+
+        // Verifikasi temp_akad_mus juga tersimpan
+        $akad = DB::table('temp_akad_mus')->where('cif', $anggota->cif)->first();
+        $this->assertNotNull($akad);
+        $this->assertSame('NAMA TERBARU', $akad->nama);
+        $this->assertSame('CAO002', $akad->cao);
+        $this->assertSame('KELBARU', $akad->code_kel);
+    }
+
+    public function test_simpan_pembiayaan_mengupdate_temp_akad_mus_jika_sudah_ada_pengajuan_sebelumnya(): void
+    {
+        $admin = User::where('email', 'admin@ni')->first();
+        $anggota = $this->buatAnggotaMentah($admin->unit, 'CIFUPD2');
+
+        // Buat temp_akad_mus awal
+        $this->buatTempAkadMusMentah($admin->unit, $anggota->cif, $anggota->no);
+
+        $param = DB::table('param_biaya')->first();
+        $this->assertNotNull($param);
+
+        $payload = [
+            'unit' => $admin->unit,
+            'jenis_pembiayaan' => 1,
+            'no_rek' => $anggota->no,
+            'cif' => $anggota->cif,
+            'pengajuan' => (int) $param->pla,
+            'tenor' => (int) $param->jw,
+            'disetujui' => (int) $param->pla,
+            'tgl_wakalah' => '2027-01-04',
+            'tgl_akad' => '2027-01-04',
+            'bidang_usaha' => 'JASA',
+            'keterangan_usaha' => 'BENGKEL MOTOR',
+            'param_tanggal' => '2027-01-04',
+            'cao' => 'CAO001',
+            'kode_kel' => $anggota->kode_kel,
+            'nama' => 'NAMA EDIT AKAD',
+            'tgl_lahir' => '1990-01-01',
+        ];
+
+        // Harusnya tidak error "Record already exist", melainkan berhasil mengupdate!
+        $response = $this->postJson(route('pembiayaan.add', $anggota->cif), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'success']);
+
+        $akad = DB::table('temp_akad_mus')->where('cif', $anggota->cif)->first();
+        $this->assertNotNull($akad);
+        $this->assertSame('NAMA EDIT AKAD', $akad->nama);
+        $this->assertSame('JASA', $akad->usaha);
+        $this->assertSame('BENGKEL MOTOR', $akad->nama_usaha);
+    }
+
+    public function test_simpan_pembiayaan_gagal_jika_no_rek_sudah_digunakan_cif_lain_di_temp_akad_mus(): void
+    {
+        $admin = User::where('email', 'admin@ni')->first();
+        $anggota1 = $this->buatAnggotaMentah($admin->unit, 'CIFKONF1');
+        $anggota2 = $this->buatAnggotaMentah($admin->unit, 'CIFKONF2');
+
+        // Buat temp_akad_mus untuk anggota 1 dengan no_rek anggota 1
+        $this->buatTempAkadMusMentah($admin->unit, $anggota1->cif, $anggota1->no);
+
+        $param = DB::table('param_biaya')->first();
+        $this->assertNotNull($param);
+
+        // Anggota 2 mencoba mengajukan pembiayaan dengan no_rek milik anggota 1
+        $payload = [
+            'unit' => $admin->unit,
+            'jenis_pembiayaan' => 1,
+            'no_rek' => $anggota1->no,
+            'cif' => $anggota2->cif,
+            'pengajuan' => (int) $param->pla,
+            'tenor' => (int) $param->jw,
+            'disetujui' => (int) $param->pla,
+            'tgl_wakalah' => '2027-01-04',
+            'tgl_akad' => '2027-01-04',
+            'bidang_usaha' => 'JASA',
+            'keterangan_usaha' => 'BENGKEL',
+            'param_tanggal' => '2027-01-04',
+            'cao' => 'CAO001',
+            'kode_kel' => $anggota2->kode_kel,
+            'nama' => $anggota2->nama,
+            'tgl_lahir' => '1990-01-01',
+        ];
+
+        $response = $this->postJson(route('pembiayaan.add', $anggota2->cif), $payload);
+
+        $response->assertStatus(400);
+        $response->assertJson(['status' => 'error']);
+    }
+
+    public function test_cari_ktp_pembiayaan_validasi_nik_harus_diisi(): void
+    {
+        $response = $this->postJson(route('pembiayaan.cariKtp'), []);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['nik']);
+    }
+
+    public function test_cari_ktp_pembiayaan_berhasil_mengembalikan_data(): void
+    {
+        Http::fake([
+            config('services.mobcol.ktp_url') . '*' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    [
+                        'ktp' => 'ktp_sample.jpg',
+                        'penjamin' => 'penjamin_sample.jpg',
+                        'kk' => 'kk_sample.jpg',
+                        'usaha' => 'usaha_sample.jpg',
+                    ]
+                ]
+            ], 200)
+        ]);
+
+        $response = $this->postJson(route('pembiayaan.cariKtp'), [
+            'nik' => '3320044000000001'
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.ktp', 'ktp_sample.jpg');
     }
 }

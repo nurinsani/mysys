@@ -40,7 +40,7 @@
                 <span class="col-sm-4 col-form-label">No Identitas <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
                   <div class="input-group">
-                    <input type="text" class="form-control" name="ktp" id="ktp" value="{{ $pembiayaan->ktp }}">
+                    <input type="text" class="form-control" name="ktp" id="ktp" value="{{ $pembiayaan->ktp }}" readonly>
                     <div class="input-group-append">
                       <button type="button" class="btn btn-primary" id="searchKtp" onclick="cariKtp()">
                         <i class="fas fa-search"></i>
@@ -53,66 +53,63 @@
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Nama <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->nama_anggota }}" name="nama" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->nama_anggota }}" name="nama">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Tempat Lahir <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->tempat_lahir }}" name="tempat_lahir"
-                    readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->tempat_lahir }}" name="tempat_lahir">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Tanggal Lahir <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="date" class="form-control" value="{{ $pembiayaan->tanggal_lahir }}" name="tgl_lahir"
-                    readonly>
+                  <input type="date" class="form-control" value="{{ $pembiayaan->tanggal_lahir }}" name="tgl_lahir">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Alamat <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <textarea name="alamat" class="form-control" readonly>{{ $pembiayaan->alamat }}</textarea>
+                  <textarea name="alamat" class="form-control">{{ $pembiayaan->alamat }}</textarea>
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">RT/RW <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->rtrw }}" name="rtrw" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->rtrw }}" name="rtrw">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Kelurahan/Desa <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->desa }}" name="desa" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->desa }}" name="desa">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Kecamatan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->kecamatan }}" name="kecamatan"
-                    readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->kecamatan }}" name="kecamatan">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Kabupaten <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->kota }}" name="kota" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->kota }}" name="kota">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Kode Pos <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->kode_pos }}" name="kode_pos" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->kode_pos }}" name="kode_pos">
                 </div>
               </div>
 
@@ -120,8 +117,7 @@
                 <div class="form-group row">
                   <span class="col-sm-4 col-form-label">Alamat <span class="text-danger">*</span></span>
                   <div class="col-sm-7">
-                    <textarea name="alamat_domisili" class="form-control"
-                      readonly>{{ $pembiayaan->alamat_domisili }}</textarea>
+                    <textarea name="alamat_domisili" class="form-control">{{ $pembiayaan->alamat_domisili }}</textarea>
                   </div>
                 </div>
 
@@ -129,7 +125,7 @@
                   <span class="col-sm-4 col-form-label">RT/RW <span class="text-danger">*</span></span>
                   <div class="col-sm-7">
                     <input type="text" class="form-control" value="{{ $pembiayaan->rtrw_domisili }}"
-                      name="rtrw_domisili" readonly>
+                      name="rtrw_domisili">
                   </div>
                 </div>
 
@@ -137,7 +133,7 @@
                   <span class="col-sm-4 col-form-label">Kelurahan/Desa <span class="text-danger">*</span></span>
                   <div class="col-sm-7">
                     <input type="text" class="form-control" value="{{ $pembiayaan->desa_domisili }}"
-                      name="desa_domisili" readonly>
+                      name="desa_domisili">
                   </div>
                 </div>
 
@@ -145,7 +141,7 @@
                   <span class="col-sm-4 col-form-label">Kecamatan <span class="text-danger">*</span></span>
                   <div class="col-sm-7">
                     <input type="text" class="form-control" value="{{ $pembiayaan->kecamatan_domisili }}"
-                      name="kecamatan_domisili" readonly>
+                      name="kecamatan_domisili">
                   </div>
                 </div>
 
@@ -153,7 +149,7 @@
                   <span class="col-sm-4 col-form-label">Kabupaten <span class="text-danger">*</span></span>
                   <div class="col-sm-7">
                     <input type="text" class="form-control" value="{{ $pembiayaan->kota_domisili }}"
-                      name="kota_domisili" readonly>
+                      name="kota_domisili">
                   </div>
                 </div>
 
@@ -161,7 +157,7 @@
                   <span class="col-sm-4 col-form-label">Kode Pos <span class="text-danger">*</span></span>
                   <div class="col-sm-7">
                     <input type="text" class="form-control" value="{{ $pembiayaan->kode_pos_domisili }}"
-                      name="kode_pos_domisili" readonly>
+                      name="kode_pos_domisili">
                   </div>
                 </div>
               </fieldset>
@@ -173,22 +169,21 @@
                 <span class="col-sm-4 col-form-label">Status Perkawinan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
                   <input type="text" class="form-control" value="{{ $pembiayaan->status_menikah }}"
-                    name="status_menikah" readonly>
+                    name="status_menikah">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Agama <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->agama }}" name="agama" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->agama }}" name="agama">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Pendidikan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->pendidikan }}" name="pendidikan"
-                    readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->pendidikan }}" name="pendidikan">
                 </div>
               </div>
 
@@ -196,14 +191,14 @@
                 <span class="col-sm-4 col-form-label">Kewarganegaraan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
                   <input type="text" class="form-control" value="{{ $pembiayaan->kewarganegaraan }}"
-                    name="kewarganegaraan" readonly>
+                    name="kewarganegaraan">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Nama Pasangan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->waris }}" name="waris" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->waris }}" name="waris">
                 </div>
               </div>
 
@@ -211,30 +206,28 @@
                 <span class="col-sm-4 col-form-label">Pekerjaan Pasangan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
                   <input type="text" class="form-control" value="{{ $pembiayaan->pekerjaan_pasangan }}"
-                    name="pekerjaan_pasangan" readonly>
+                    name="pekerjaan_pasangan">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">No. Telp <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->no_hp }}" name="no_hp" readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->no_hp }}" name="no_hp">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">No. Telp Pasangan <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->hp_pasangan }}" name="hp_pasangan"
-                    readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->hp_pasangan }}" name="hp_pasangan">
                 </div>
               </div>
 
               <div class="form-group row">
                 <span class="col-sm-4 col-form-label">Nama Ibu Kandung <span class="text-danger">*</span></span>
                 <div class="col-sm-7">
-                  <input type="text" class="form-control" value="{{ $pembiayaan->ibu_kandung }}" name="ibu_kandung"
-                    readonly>
+                  <input type="text" class="form-control" value="{{ $pembiayaan->ibu_kandung }}" name="ibu_kandung" readonly>
                 </div>
               </div>
 
@@ -283,6 +276,7 @@
                 <div class="col-sm-7">
                   <input type="number" class="form-control" name="pengajuan" id="pengajuan"
                     placeholder="Masukkan Nominal Pengajuan" required>
+                  <span id="preview-pengajuan" class="form-text text-muted mt-1">Rp 0</span>
                   <span class="help-block with-errors text-danger"></span>
                 </div>
               </div>
@@ -305,6 +299,7 @@
                 <div class="col-sm-7">
                   <input type="number" class="form-control" name="disetujui" id="disetujui"
                     placeholder="Masukkan Nominal Persetujuan" required>
+                  <span id="preview-disetujui" class="form-text text-muted mt-1">Rp 0</span>
                   <span class="help-block with-errors text-danger"></span>
                 </div>
               </div>
@@ -355,7 +350,50 @@
                 <label class="col-sm-4 col-form-label mx-auto">DOKUMEN ANGGOTA</label>
               </div>
 
-              <div class="form-group row" id="resultContainer"></div>
+              <div class="form-group row" id="resultContainer" style="width: 100%; margin: 0 auto;">
+                <div class="col-12 px-0">
+                  <ul class="nav nav-tabs nav-fill mb-3" id="dokumenTabs" role="tablist">
+                    <li class="nav-item">
+                      <a class="nav-link active font-weight-bold" id="tab-dokumen-lama" data-toggle="tab" data-bs-toggle="tab" href="#pane-dokumen-lama" role="tab" aria-controls="pane-dokumen-lama" aria-selected="true">
+                        Dokumen Lama
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link font-weight-bold" id="tab-dokumen-lanjutan" data-toggle="tab" data-bs-toggle="tab" href="#pane-dokumen-lanjutan" role="tab" aria-controls="pane-dokumen-lanjutan" aria-selected="false">
+                        Dokumen Lanjutan
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link font-weight-bold" id="tab-dokumen-baru" data-toggle="tab" data-bs-toggle="tab" href="#pane-dokumen-baru" role="tab" aria-controls="pane-dokumen-baru" aria-selected="false">
+                        Dokumen Baru
+                      </a>
+                    </li>
+                  </ul>
+                  <div class="tab-content" id="dokumenTabsContent">
+                    <div class="tab-pane fade show active" id="pane-dokumen-lama" role="tabpanel" aria-labelledby="tab-dokumen-lama">
+                      <div class="row" id="docList-lama">
+                        <div class="col-12 text-center text-muted py-4">
+                          <small>Klik tombol cari pada No Identitas untuk memuat dokumen.</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tab-pane fade" id="pane-dokumen-lanjutan" role="tabpanel" aria-labelledby="tab-dokumen-lanjutan">
+                      <div class="row" id="docList-lanjutan">
+                        <div class="col-12 text-center text-muted py-4">
+                          <small>Klik tombol cari pada No Identitas untuk memuat dokumen.</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tab-pane fade" id="pane-dokumen-baru" role="tabpanel" aria-labelledby="tab-dokumen-baru">
+                      <div class="row" id="docList-baru">
+                        <div class="col-12 text-center text-muted py-4">
+                          <small>Klik tombol cari pada No Identitas untuk memuat dokumen.</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <!-- Hidden input to store id -->
               <input type="hidden" name="id" id="id" value="{{ Auth::user()->role_id }}" required>

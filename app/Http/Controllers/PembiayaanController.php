@@ -7,8 +7,11 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use App\Http\Requests\Pembiayaan\AddPembiayaanRequest;
 use App\Repositories\Contracts\KelompokRepositoryInterface;
+use App\Models\Anggota;
+use App\Models\AnggotaDetail;
 
 class PembiayaanController extends BaseController
 {
@@ -104,6 +107,35 @@ class PembiayaanController extends BaseController
         }
     }
 
+    public function cariKtp(Request $request)
+    {
+        $request->validate([
+            'nik' => 'required|string',
+        ]);
+
+        $nik = $request->input('nik');
+
+        try {
+            $response = Http::timeout(10)->get(config('services.mobcol.ktp_url'), ['ktp' => $nik]);
+        } catch (\Illuminate\Http\Client\ConnectionException | \GuzzleHttp\Exception\GuzzleException $e) {
+            Log::error('Koneksi ke layanan cek KTP pembiayaan gagal: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'Layanan cek KTP sedang tidak bisa diakses. Coba lagi nanti.',
+            ], 503);
+        }
+
+        if (! $response->successful()) {
+            return response()->json([
+                'error' => 'Data tidak ditemukan',
+            ], 404);
+        }
+
+        $data = $response->json();
+
+        return response()->json($data);
+    }
+
     public function edit($cif)
     {
         $title = 'Edit Pembiayaan';
@@ -180,7 +212,127 @@ class PembiayaanController extends BaseController
         $userId = Auth::id();
         $jenisPembiayaan = (int) $validated['jenis_pembiayaan'];
 
+        DB::beginTransaction();
         try {
+
+            // Cek jika no_anggota / no_rek dipakai oleh CIF lain di temp_akad_mus
+            $conflictRecord = DB::table('temp_akad_mus')
+                ->where('cif', '!=', $validated['cif'])
+                ->where('no_anggota', $validated['no_rek'])
+                ->first();
+
+            if ($conflictRecord) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $conflictRecord->unit !== $unit
+                        ? 'NIK / CIF already used in another unit'
+                        : 'Record already exist'
+                ], 400);
+            }
+
+            $existingRecord = DB::table('temp_akad_mus')
+                ->where('cif', $validated['cif'])
+                ->first();
+
+            if ($existingRecord && $existingRecord->unit !== $unit) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'NIK / CIF already used in another unit'
+                ], 400);
+            }
+
+            // Update data Anggota & AnggotaDetail jika ada perubahan
+            $anggota = Anggota::where('cif', $validated['cif'])
+                ->where('unit', $unit)
+                ->first();
+
+            if ($anggota) {
+                $anggotaUpdate = [];
+                if (array_key_exists('nama', $validated) && $validated['nama'] !== null) {
+                    $anggotaUpdate['nama'] = strtoupper($validated['nama']);
+                }
+                if (array_key_exists('tempat_lahir', $validated) && $validated['tempat_lahir'] !== null) {
+                    $anggotaUpdate['tempat_lahir'] = strtoupper($validated['tempat_lahir']);
+                }
+                if (array_key_exists('tgl_lahir', $validated) && $validated['tgl_lahir'] !== null) {
+                    $anggotaUpdate['tgl_lahir'] = $validated['tgl_lahir'];
+                }
+                if (array_key_exists('alamat', $validated) && $validated['alamat'] !== null) {
+                    $anggotaUpdate['alamat'] = strtoupper($validated['alamat']);
+                }
+                if (array_key_exists('rtrw', $validated) && $validated['rtrw'] !== null) {
+                    $anggotaUpdate['rtrw'] = strtoupper($validated['rtrw']);
+                }
+                if (array_key_exists('desa', $validated) && $validated['desa'] !== null) {
+                    $anggotaUpdate['desa'] = strtoupper($validated['desa']);
+                }
+                if (array_key_exists('kecamatan', $validated) && $validated['kecamatan'] !== null) {
+                    $anggotaUpdate['kecamatan'] = strtoupper($validated['kecamatan']);
+                }
+                if (array_key_exists('kota', $validated) && $validated['kota'] !== null) {
+                    $anggotaUpdate['kota'] = strtoupper($validated['kota']);
+                }
+                if (array_key_exists('kode_pos', $validated) && $validated['kode_pos'] !== null) {
+                    $anggotaUpdate['kode_pos'] = strtoupper($validated['kode_pos']);
+                }
+                if (array_key_exists('status_menikah', $validated) && $validated['status_menikah'] !== null) {
+                    $anggotaUpdate['status_menikah'] = strtoupper($validated['status_menikah']);
+                }
+                if (array_key_exists('agama', $validated) && $validated['agama'] !== null) {
+                    $anggotaUpdate['agama'] = strtoupper($validated['agama']);
+                }
+                if (array_key_exists('pendidikan', $validated) && $validated['pendidikan'] !== null) {
+                    $anggotaUpdate['pendidikan'] = strtoupper($validated['pendidikan']);
+                }
+                if (array_key_exists('kewarganegaraan', $validated) && $validated['kewarganegaraan'] !== null) {
+                    $anggotaUpdate['kewarganegaraan'] = strtoupper($validated['kewarganegaraan']);
+                }
+                if (array_key_exists('waris', $validated) && $validated['waris'] !== null) {
+                    $anggotaUpdate['waris'] = strtoupper($validated['waris']);
+                }
+                if (array_key_exists('pekerjaan_pasangan', $validated) && $validated['pekerjaan_pasangan'] !== null) {
+                    $anggotaUpdate['pekerjaan_pasangan'] = strtoupper($validated['pekerjaan_pasangan']);
+                }
+                if (array_key_exists('no_hp', $validated) && $validated['no_hp'] !== null) {
+                    $anggotaUpdate['no_hp'] = strtoupper($validated['no_hp']);
+                }
+                if (array_key_exists('hp_pasangan', $validated) && $validated['hp_pasangan'] !== null) {
+                    $anggotaUpdate['hp_pasangan'] = strtoupper($validated['hp_pasangan']);
+                }
+
+                if (!empty($anggotaUpdate)) {
+                    $anggota->update($anggotaUpdate);
+                }
+
+                $detailUpdate = [];
+                if (array_key_exists('alamat_domisili', $validated)) {
+                    $detailUpdate['alamat_domisili'] = strtoupper($validated['alamat_domisili'] ?? '');
+                }
+                if (array_key_exists('rtrw_domisili', $validated)) {
+                    $detailUpdate['rtrw_domisili'] = strtoupper($validated['rtrw_domisili'] ?? '');
+                }
+                if (array_key_exists('desa_domisili', $validated)) {
+                    $detailUpdate['desa_domisili'] = strtoupper($validated['desa_domisili'] ?? '');
+                }
+                if (array_key_exists('kecamatan_domisili', $validated)) {
+                    $detailUpdate['kecamatan_domisili'] = strtoupper($validated['kecamatan_domisili'] ?? '');
+                }
+                if (array_key_exists('kota_domisili', $validated)) {
+                    $detailUpdate['kota_domisili'] = strtoupper($validated['kota_domisili'] ?? '');
+                }
+                if (array_key_exists('kode_pos_domisili', $validated)) {
+                    $detailUpdate['kode_pos_domisili'] = strtoupper($validated['kode_pos_domisili'] ?? '');
+                }
+
+                if (!empty($detailUpdate)) {
+                    AnggotaDetail::updateOrCreate(
+                        ['no_anggota' => $anggota->no],
+                        $detailUpdate
+                    );
+                }
+            }
 
             $lastSuffix = DB::table('temp_akad_mus')
                 ->where('cif', $validated['cif'])
@@ -188,29 +340,13 @@ class PembiayaanController extends BaseController
 
             $suffix = $lastSuffix ? ((int)$lastSuffix + 1) : 1;
 
-            $existingRecord = DB::table('temp_akad_mus')
-                ->where(function ($q) use ($validated) {
-                    $q->where('cif', $validated['cif'])
-                    ->orWhere('no_anggota', $validated['no_rek']);
-                })
-                ->select('unit')
-                ->first();
-
-            if ($existingRecord) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $existingRecord->unit !== $unit
-                        ? 'NIK / CIF already used in another unit'
-                        : 'Record already exist'
-                ], 400);
-            }
-
             $param = DB::table('param_biaya')
                 ->where('pla', (int) $validated['disetujui'])
                 ->where('jw', (int) $validated['tenor'])
                 ->first();
 
             if (!$param) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Approved amount & tenor not found in param biaya'
@@ -228,9 +364,11 @@ class PembiayaanController extends BaseController
             // ================================
             // JIKA AKAD MUSYARAKAH
             // ================================
+            $persenMarginMusyarokah = null;
             if ($jenisPembiayaan === 2) {
 
                 if (empty($validated['omzet'])) {
+                    DB::rollBack();
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Omzet wajib diisi untuk pembiayaan Musyarakah'
@@ -240,6 +378,7 @@ class PembiayaanController extends BaseController
                 $omzet = (float) $validated['omzet'];
 
                 if ($omzet <= 0) {
+                    DB::rollBack();
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Omzet tidak valid'
@@ -254,6 +393,7 @@ class PembiayaanController extends BaseController
                 $basisOmzet = $isPembiayaanLanjutan ? $omzet : ($omzet / 2);
 
                 if ($basisOmzet <= 0) {
+                    DB::rollBack();
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Basis omzet tidak valid'
@@ -263,19 +403,20 @@ class PembiayaanController extends BaseController
                 $persenMarginMusyarokah = round(($ijaroh / $basisOmzet) * 100, 2);
 
                 if (!$isPembiayaanLanjutan) {
-                    DB::table('omzet')->insert([
-                        'tanggal' => now()->toDateString(),
-                        'cif' => $validated['cif'],
-                        'nominal' => $omzet,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    DB::table('omzet')->updateOrInsert(
+                        ['cif' => $validated['cif'], 'tanggal' => now()->toDateString()],
+                        [
+                            'nominal' => $omzet,
+                            'updated_at' => now(),
+                        ]
+                    );
                 }
             }
 
 
             $wakalahDate = Carbon::parse($validated['tgl_wakalah']);
             if ($wakalahDate->isFriday()) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Jumat bukan hari pengumpulan'
@@ -309,14 +450,13 @@ class PembiayaanController extends BaseController
             $nextPayment     = $jadwal[0];
             $maturityPayment = end($jadwal);
 
-            DB::table('temp_akad_mus')->insert([
+            $akadData = [
                 'buss_date' => Carbon::parse($validated['param_tanggal']),
                 'code_kel' => $validated['kode_kel'],
                 'no_anggota' => $validated['no_rek'],
                 'cif' => $validated['cif'],
-                'nama' => $validated['nama'],
+                'nama' => strtoupper($validated['nama']),
                 'deal_type' => '1',
-                'suffix' => (string) $suffix,
                 'bagi_hasil'     => $saldoMargin,
                 'tenor' => $validated['tenor'],
                 'plafond' => $validated['disetujui'],
@@ -338,7 +478,7 @@ class PembiayaanController extends BaseController
                 'maturity_date' => $maturityPayment,
                 'last_payment' => null,
                 'hari' => $dayOfWeek,
-                'cao' => $validated['cao'],
+                'cao' => strtoupper($validated['cao']),
                 'userid' => $userId,
                 'status' => 'ANGGOTA',
                 'status_usia' => $statusUsia,
@@ -346,18 +486,29 @@ class PembiayaanController extends BaseController
                 'gol' => 1,
                 'deal_produk' => $jenisPembiayaan === 2 ? '3' : $jenisPembiayaan,
                 'persen_margin' => $jenisPembiayaan === 2 ? $persenMarginMusyarokah : $persenMargin,
-                'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+
+            if ($existingRecord) {
+                DB::table('temp_akad_mus')
+                    ->where('cif', $validated['cif'])
+                    ->update($akadData);
+            } else {
+                $akadData['suffix'] = (string) $suffix;
+                $akadData['created_at'] = now();
+                DB::table('temp_akad_mus')->insert($akadData);
+            }
+
+            DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Pembiayaan successfully added.'
+                'message' => $existingRecord ? 'Pembiayaan successfully updated.' : 'Pembiayaan successfully added.'
             ]);
 
         } catch (\Throwable $e) {
-            
-            Log::error('Add Pembiayaan Error', [
+            DB::rollBack();
+            Log::error('Add/Update Pembiayaan Error', [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
