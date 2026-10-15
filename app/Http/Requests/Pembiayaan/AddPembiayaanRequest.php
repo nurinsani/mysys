@@ -33,6 +33,30 @@ class AddPembiayaanRequest extends FormRequest
             'nama' => 'required|string',
             'tgl_lahir' => 'required|date',
             'omzet' => 'nullable|numeric|min:1',
+
+            // Data Anggota & Domisili
+            'tempat_lahir' => 'nullable|string',
+            'alamat' => 'nullable|string',
+            'rtrw' => 'nullable|string',
+            'desa' => 'nullable|string',
+            'kecamatan' => 'nullable|string',
+            'kota' => 'nullable|string',
+            'kode_pos' => 'nullable|string',
+            'alamat_domisili' => 'nullable|string',
+            'rtrw_domisili' => 'nullable|string',
+            'desa_domisili' => 'nullable|string',
+            'kecamatan_domisili' => 'nullable|string',
+            'kota_domisili' => 'nullable|string',
+            'kode_pos_domisili' => 'nullable|string',
+            'status_menikah' => 'nullable|string',
+            'agama' => 'nullable|string',
+            'pendidikan' => 'nullable|string',
+            'kewarganegaraan' => 'nullable|string',
+            'waris' => 'nullable|string',
+            'pekerjaan_pasangan' => 'nullable|string',
+            'no_hp' => 'nullable|string',
+            'hp_pasangan' => 'nullable|string',
+            'ibu_kandung' => 'nullable|string',
         ];
     }
 }

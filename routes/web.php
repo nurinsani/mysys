@@ -142,6 +142,7 @@ Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::get('/pembiayaan', [PembiayaanController::class, 'index'])->name('pembiayaan.index');
     Route::get('/pembiayaan/cari-kelompok', [PembiayaanController::class, 'cariKelompok'])->name('pembiayaan.cariKelompok');
     Route::get('/pembiayaan/data', [PembiayaanController::class, 'data'])->name('pembiayaan.data');
+    Route::post('/pembiayaan/cari-ktp', [PembiayaanController::class, 'cariKtp'])->name('pembiayaan.cariKtp');
     Route::post('/pembiayaan/add/{cif}', [PembiayaanController::class, 'addPembiayaan'])->name('pembiayaan.add');
     Route::get('/pembiayaan/edit/{cif}', [PembiayaanController::class, 'edit'])->name('pembiayaan.edit');
 
