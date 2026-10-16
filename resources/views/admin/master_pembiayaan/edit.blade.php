@@ -350,13 +350,13 @@
 
   // Konfigurasi endpoint pembiayaan untuk masing-masing tab
   const DOKUMEN_ENDPOINTS = {
-    lama: '/pembiayaan/cari-ktp',      // Tab Dokumen Lama
-    lanjutan: '/pembiayaan/cari-ktp',  // Tab Dokumen Lanjutan (sementara sama)
-    baru: '/pembiayaan/cari-ktp'       // Tab Dokumen Baru (sementara sama)
+    lama: "{{ route('pembiayaan.cariKtp') }}",      // Tab Dokumen Lama
+    lanjutan: "{{ route('pembiayaan.cariKtp') }}",  // Tab Dokumen Lanjutan (sementara sama)
+    baru: "{{ route('pembiayaan.cariKtp') }}"       // Tab Dokumen Baru (sementara sama)
   };
 
   async function fetchTabDokumen(tabKey, tabTitle, containerId, nik) {
-    const endpoint = DOKUMEN_ENDPOINTS[tabKey] || '/pembiayaan/cari-ktp';
+    const endpoint = DOKUMEN_ENDPOINTS[tabKey] || "{{ route('pembiayaan.cariKtp') }}";
     const container = document.getElementById(containerId);
     if (!container) return;
 
