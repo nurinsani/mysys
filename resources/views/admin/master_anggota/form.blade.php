@@ -366,8 +366,10 @@
                                         <option value="BELUM MENIKAH"
                                             {{ old('status_menikah') == 'BELUM MENIKAH' ? 'selected' : '' }}>BELUM
                                             MENIKAH</option>
-                                        <option value="JANDA"
-                                            {{ old('status_menikah') == 'JANDA' ? 'selected' : '' }}>JANDA</option>
+                                        <option value="CERAI MATI"
+                                            {{ old('status_menikah') == 'CERAI MATI' ? 'selected' : '' }}>CERAI MATI</option>
+                                             <option value="CERAI HIDUP"
+                                            {{ old('status_menikah') == 'CERAI HIDUP' ? 'selected' : '' }}>CERAI HIDUP</option>
                                     </select>
                                     @error('status_menikah')
                                         <div class="invalid-feedback">{{ $message }}</div>
