@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SURAT APPROVAL</title>
+  <title>APPROVAL</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -62,13 +62,13 @@
 
 <body>
 
-  <h2 class="center">KOPERASI JASA KEUANGAN SYARIAH NUR INSANI AREA PEMASARAN BRANGSONG</h2>
-  <p class="center">ALAMAT KEL SIDOREJO RT 001 RW 008 KEC BRANGSONG KAB KENDAL</p>
-  <h3 class="center">REKAP PERMOHONAN DAN REKOMENDASI PINJAMAN KELOMPOK</h3>
+  <h2 >KOPERASI SIMPAN PINJAM DAN PEMBIAYAAN SYARIAH NUR INSANI AREA PEMASARAN BRANGSONG</h2>
+  <h2 >ALAMAT KEL SIDOREJO RT 001 RW 008 KEC BRANGSONG KAB KENDAL </h2>
+  <h3>REKAP PERMOHONAN DAN REKOMENDASI PEMBIAYAAN KELOMPOK</h3>
 
   <p>Kode Area Pemasaran: <strong>{{ $unit }}</strong></p>
-  <p>Tanggal Cair: <strong>{{ $anggota[0]->tgl_wakalah }}</strong></p>
-  <p>Nama MM: <strong>{{ $namaMM }}</strong></p>
+  <p>Tanggal Cair       : <strong>{{ $anggota[0]->tgl_wakalah }}</strong></p>
+  <p>Nama MM            : <strong>{{ $namaMM }}</strong></p>
 
   <table>
     <thead>
@@ -80,7 +80,7 @@
         <th>Nama Suami</th>
         <th>Alamat</th>
         <th>Jenis Usaha</th>
-        <th>Pengajuan Ac</th>
+        <th>Pengajuan AO</th>
         <th>Tanggal PK</th>
         <th>JML</th>
         <th>Sebelumnya</th>
@@ -167,19 +167,7 @@
             <tr>
               <td align="center">
                 <span class="signature-line">(.................................)</span><br>
-                SAO/AO
-              </td>
-              <td align="center">
-                <span class="signature-line">(.................................)</span><br>
-                SAO/AO
-              </td>
-              <td align="center">
-                <span class="signature-line">(.................................)</span><br>
-                SAO/AO
-              </td>
-              <td align="center">
-                <span class="signature-line">(.................................)</span><br>
-                SAO/AO
+                SA/AL
               </td>
             </tr>
           </table>
