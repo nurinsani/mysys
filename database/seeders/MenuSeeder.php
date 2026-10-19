@@ -14,7 +14,7 @@ class MenuSeeder extends Seeder
     public function run(): void
     {
         Menu::create([
-            'name' => 'Dahsboard',
+            'name' => 'Dashboard',
             'icon' => 'nav-icon fas fa-tachometer-alt',
             'parent_id' => null,
             'url' => '/admin', // Contoh URL
@@ -119,7 +119,7 @@ class MenuSeeder extends Seeder
             'role_id' => 1,
         ]);
         Menu::create([
-            'name' => 'Cetak Cs',
+            'name' => 'Cetak CS',
             'icon' => 'far fa-circle nav-icon',
             'parent_id' => $CetakData->id,
             'url' => '/cetak/cs',
@@ -129,7 +129,7 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'name' => 'Cetak Cs WO',
+            'name' => 'Cetak CS WO',
             'icon' => 'far fa-circle nav-icon',
             'parent_id' => $CetakData->id,
             'url' => '/cetak/cs_wo',
@@ -139,7 +139,7 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'name' => 'Cetak Simapanan 5%',
+            'name' => 'Cetak Simpanan 5%',
             'icon' => 'far fa-circle nav-icon',
             'parent_id' => $CetakData->id,
             'url' => '/cetak/simpanan-5-persen',
@@ -190,7 +190,7 @@ class MenuSeeder extends Seeder
 
         // Submenu
         Menu::create([
-            'name' => 'Realiasi Wakalah',
+            'name' => 'Realisasi Wakalah',
             'icon' => 'far fa-circle nav-icon',
             'parent_id' => $Realisasi->id,
             'url' => '/realisasi_wakalah',
@@ -561,7 +561,7 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'name' => 'Setorann Bank',
+            'name' => 'Setoran Bank',
             'icon' => 'far fa-circle nav-icon',
             'parent_id' => $mobcoll->id,
             'url' => '/setoran-bank',
