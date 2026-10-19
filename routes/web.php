@@ -169,7 +169,7 @@ Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::post('/restrukturisasi/by-kelompok/restrukturisasi', [RestrukturisasiByKelompokController::class, 'restrukturisasi'])->name('rest_kelompok.restrukturisasi');
 
     // DOMpdf
-    Route::get('/pdf/generate/{feature}/{date}', [PDFController::class, 'generateMusyarakahPdf'])->name('pdf.generateMusyarakah');
+    Route::get('/pdf/generate/musyarakah/{feature}/{date}', [PDFController::class, 'generateMusyarakahPdf'])->name('pdf.generateMusyarakah');
     Route::get('/pdf/generate/{feature}/{kelompok}/{date}', [PDFController::class, 'generateLaRisywahPdf'])->name('pdf.generateLaRisywah');
     Route::get('/pdf/generate/{feature}/{date}', [PDFController::class, 'generateApprovalPdf'])->name('pdf.generateApproval');
 

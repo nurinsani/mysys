@@ -34,6 +34,7 @@ class PDFController extends Controller
                 'anggota.ktp as ktp',
                 'anggota.desa as desa',
                 'anggota.kecamatan as kecamatan',
+                'anggota.kota as kota',
                 'anggota.nama as anggota_nama',
                 'ao.atasan as atasan',
                 'mm.nama as mm_nama',
@@ -76,6 +77,7 @@ class PDFController extends Controller
             $result->ktp = $result->ktp ?? null;
             $result->desa = $result->desa ?? null;
             $result->kecamatan = $result->kecamatan ?? null;
+            $result->kota = $result->kota ?? null;
             $result->namaMM = $result->mm_nama ?? null;
             $result->anggotaNama = $result->anggota_nama ?? null;
         }
