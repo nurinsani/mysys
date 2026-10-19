@@ -21,18 +21,16 @@ class CetakApprovalController extends BaseController
         $title = 'Cetak Approval';
 
         $request->validate([
-            'tanggal_murab' => 'required|date_format:Y-m-d',
+            'tgl_akad' => 'required|date_format:Y-m-d',
             'unit' => 'required|string'
         ]);
 
-        $tanggalMurab = \Carbon\Carbon::createFromFormat('Y-m-d', $request->tanggal_murab)
-            ->startOfDay()
-            ->format('Y-m-d H:i:s');
+        $tglAkad = \Carbon\Carbon::createFromFormat('Y-m-d', $request->tgl_akad)->format('Y-m-d');
 
         $unit = $request->unit;
 
         $results = DB::table('temp_akad_mus')
-            ->where('tgl_murab', $tanggalMurab)
+            ->where('tgl_akad', $tglAkad)
             ->where('unit', $unit)
             ->get();
 
@@ -51,7 +49,7 @@ class CetakApprovalController extends BaseController
         if ($request->ajax()) {
             $iframeUrl = route('pdf.generateApproval', [
                 'feature' => 'cetak_approval',
-                'date' => $tanggalMurab,
+                'date' => $tglAkad,
                 'unit' => $unit,
             ]);
 
@@ -63,6 +61,6 @@ class CetakApprovalController extends BaseController
         }
 
         alert()->success('Berhasil!', 'Data berhasil ditemukan.');
-        return view('admin.cetak_approval.result', compact('results', 'menus', 'title'));
+        return view('admin.cetak_approval.results', compact('results', 'menus', 'title'));
     }
 }

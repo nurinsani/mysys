@@ -25,24 +25,28 @@
     </div>
 
     <div class="card-body">
-      <form id="approvalForm" action="{{ route('form_approval') }}" method="POST">
-        @csrf
-        <div class="mb-3">
-          <label for="tanggalMurab" class="form-label">Tanggal Murabahah</label>
-          <input type="date" name="tanggal_murab" class="form-control @error('tanggal_murab') is-invalid @enderror"
-            id="tanggalMurab" required>
-          @error('tanggal_murab')
-          <div class="invalid-feedback">
-            {{ $message }}
-          </div>
-          @enderror
+      <div class="row">
+        <div class="col-md-6">
+          <form id="approvalForm" action="{{ route('form_approval') }}" method="POST">
+            @csrf
+            <div class="mb-3">
+              <label for="tglAkad" class="form-label">Tanggal Akad</label>
+              <input type="date" name="tgl_akad" class="form-control @error('tgl_akad') is-invalid @enderror"
+                id="tglAkad" required>
+              @error('tgl_akad')
+              <div class="invalid-feedback">
+                {{ $message }}
+              </div>
+              @enderror
+            </div>
+
+            <!-- Hidden input to store unit -->
+            <input type="hidden" name="unit" id="userUnit" value="{{ Auth::user()->unit }}">
+
+            <button type="submit" class="btn btn-primary">Cari</button>
+          </form>
         </div>
-
-        <!-- Hidden input to store unit -->
-        <input type="hidden" name="unit" id="userUnit" value="{{ Auth::user()->unit }}">
-
-        <button type="submit" class="btn btn-primary">Cari</button>
-      </form>
+      </div>
     </div>
   </div>
 </div>
