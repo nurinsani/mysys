@@ -28,7 +28,7 @@
       @else
       <div class="editor-container">
         <iframe
-          src="{{ route('pdf.generateApproval', ['feature' => 'cetak_approval', 'date' => $results->first()->tgl_murab]) }}"
+          src="{{ route('pdf.generateApproval', ['feature' => 'cetak_approval', 'date' => $results->first()->tgl_akad]) }}"
           width="100%" height="800" frameborder="0">
         </iframe>
       </div>

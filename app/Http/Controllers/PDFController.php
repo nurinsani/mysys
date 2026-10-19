@@ -148,7 +148,7 @@ class PDFController extends Controller
         abort_unless(view()->exists($viewPath), 404, 'Template not found');
 
         $unit = $request->unit;
-        $tanggalMurab = \Carbon\Carbon::parse($date)->format('Y-m-d H:i:s');
+        $tglAkad = \Carbon\Carbon::parse($date)->format('Y-m-d');
 
         $namaMM = DB::table('mm')->where('unit', $unit)->value('nama');
 
@@ -164,7 +164,7 @@ class PDFController extends Controller
                 'rekomendasi.cif'
             )
             ->where([
-                ['temp_akad_mus.tgl_murab', $tanggalMurab],
+                ['temp_akad_mus.tgl_akad', $tglAkad],
                 ['temp_akad_mus.unit', $unit]
             ])
             ->select(
@@ -225,7 +225,7 @@ class PDFController extends Controller
 
         return PDF::loadView($viewPath, compact('anggota', 'kelompok', 'totalPlafond', 'totalAnggota', 'namaMM', 'unit'))
             ->setPaper('a4', 'landscape')
-            ->stream("{$feature}_{$tanggalMurab}.pdf");
+            ->stream("{$feature}_{$tglAkad}.pdf");
     }
 
     private function convertToRupiahText($number)
