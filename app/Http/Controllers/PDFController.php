@@ -152,6 +152,10 @@ class PDFController extends Controller
 
         $namaMM = DB::table('mm')->where('unit', $unit)->value('nama');
 
+        $branch = DB::table('branch')->where('kode_branch', $unit)->first();
+        $namaUnit = $branch->unit ?? $unit;
+        $alamatUnit = $branch->alamat ?? null;
+
         $anggota = DB::table('temp_akad_mus')
             ->leftJoin('anggota', 'temp_akad_mus.cif', '=', 'anggota.cif')
             ->leftJoinSub(
@@ -223,7 +227,7 @@ class PDFController extends Controller
                 return $item;
             });
 
-        return PDF::loadView($viewPath, compact('anggota', 'kelompok', 'totalPlafond', 'totalAnggota', 'namaMM', 'unit'))
+        return PDF::loadView($viewPath, compact('anggota', 'kelompok', 'totalPlafond', 'totalAnggota', 'namaMM', 'unit', 'namaUnit', 'alamatUnit'))
             ->setPaper('a4', 'landscape')
             ->stream("{$feature}_{$tglAkad}.pdf");
     }
