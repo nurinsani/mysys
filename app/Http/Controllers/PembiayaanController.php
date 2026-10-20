@@ -17,8 +17,7 @@ class PembiayaanController extends BaseController
 {
     public function __construct(
         protected KelompokRepositoryInterface $kelompokRepository
-    ) {
-    }
+    ) {}
 
     public function index()
     {
@@ -42,6 +41,7 @@ class PembiayaanController extends BaseController
             if (!$kodeKelompok) {
                 $pending = DB::table('temp_akad_mus')
                     ->leftJoin('kelompok', 'temp_akad_mus.code_kel', '=', 'kelompok.code_kel')
+                    ->leftJoin('jenis_akad', 'temp_akad_mus.deal_produk', '=', 'jenis_akad.id')
                     ->where('temp_akad_mus.unit', Auth::user()->unit)
                     ->select(
                         'kelompok.nama_kel as nama_kelompok',
@@ -54,7 +54,9 @@ class PembiayaanController extends BaseController
                         'temp_akad_mus.suffix as suffix',
                         'temp_akad_mus.plafond as plafond',
                         'temp_akad_mus.os as os',
-                        'temp_akad_mus.tenor as tenor'
+                        'temp_akad_mus.tenor as tenor',
+                        'temp_akad_mus.deal_produk as deal_produk',
+                        DB::raw('COALESCE(jenis_akad.nama_akad, jenis_akad.jenis_akad) as nama_akad')
                     )
                     ->latest('temp_akad_mus.created_at')
                     ->get();
@@ -68,6 +70,7 @@ class PembiayaanController extends BaseController
             $anggota = DB::table('anggota')
                 ->leftJoin('kelompok', 'anggota.kode_kel', '=', 'kelompok.code_kel')
                 ->leftJoin('pembiayaan', 'anggota.cif', '=', 'pembiayaan.cif')
+                ->leftJoin('jenis_akad', 'pembiayaan.deal_produk', '=', 'jenis_akad.id')
                 ->whereNotExists(function ($query) {
                     $query->select(DB::raw(1))
                         ->from('temp_akad_mus')
@@ -88,7 +91,9 @@ class PembiayaanController extends BaseController
                     'pembiayaan.suffix as suffix',
                     DB::raw('COALESCE(pembiayaan.plafond, 0) as plafond'),
                     DB::raw('COALESCE(pembiayaan.os, 0) as os'),
-                    DB::raw('COALESCE(pembiayaan.tenor, 0) as tenor')
+                    DB::raw('COALESCE(pembiayaan.tenor, 0) as tenor'),
+                    'pembiayaan.deal_produk as deal_produk',
+                    DB::raw('COALESCE(jenis_akad.nama_akad, jenis_akad.jenis_akad) as nama_akad')
                 )
                 ->latest('anggota.no')
                 ->get();
@@ -97,7 +102,6 @@ class PembiayaanController extends BaseController
                 'status' => 'success',
                 'data' => $anggota
             ]);
-
         } catch (\Exception $e) {
             Log::error('Data Error: ' . $e->getMessage());
             return response()->json([
@@ -144,6 +148,7 @@ class PembiayaanController extends BaseController
         $pembiayaan = DB::table('anggota')
             ->leftJoin('kelompok', 'anggota.kode_kel', '=', 'kelompok.code_kel')
             ->leftJoin('pembiayaan', 'anggota.cif', '=', 'pembiayaan.cif')
+            ->leftJoin('jenis_akad', 'pembiayaan.deal_produk', '=', 'jenis_akad.id')
             ->leftJoin('anggota_details', 'anggota.no', '=', 'anggota_details.no_anggota')
             ->where('anggota.cif', $cif)
             ->where('anggota.unit', Auth::user()->unit)
@@ -183,7 +188,9 @@ class PembiayaanController extends BaseController
                 'pembiayaan.os',
                 'pembiayaan.tenor',
                 'pembiayaan.suffix',
-                'pembiayaan.deal_produk'
+                'pembiayaan.deal_produk',
+                'pembiayaan.status_app',
+                DB::raw('COALESCE(jenis_akad.nama_akad, jenis_akad.jenis_akad) as nama_akad')
             )
             ->first();
 
@@ -201,7 +208,11 @@ class PembiayaanController extends BaseController
                 ->min('nominal');
         }
 
-        return view('admin.master_pembiayaan.edit', compact('title', 'menus', 'pembiayaan', 'omzetMusyarakah'));
+        $jenisAkad = DB::table('jenis_akad')
+            ->where('unit', Auth::user()->unit)
+            ->get();
+
+        return view('admin.master_pembiayaan.edit', compact('title', 'menus', 'pembiayaan', 'omzetMusyarakah', 'jenisAkad'));
     }
 
 
@@ -300,6 +311,9 @@ class PembiayaanController extends BaseController
                 }
                 if (array_key_exists('hp_pasangan', $validated) && $validated['hp_pasangan'] !== null) {
                     $anggotaUpdate['hp_pasangan'] = strtoupper($validated['hp_pasangan']);
+                }
+                if (array_key_exists('ibu_kandung', $validated) && $validated['ibu_kandung'] !== null) {
+                    $anggotaUpdate['ibu_kandung'] = strtoupper($validated['ibu_kandung']);
                 }
 
                 if (!empty($anggotaUpdate)) {
@@ -505,7 +519,6 @@ class PembiayaanController extends BaseController
                 'status' => 'success',
                 'message' => $existingRecord ? 'Pembiayaan successfully updated.' : 'Pembiayaan successfully added.'
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Add/Update Pembiayaan Error', [
@@ -520,5 +533,4 @@ class PembiayaanController extends BaseController
             ], 500);
         }
     }
-
 }
