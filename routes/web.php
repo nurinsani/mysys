@@ -201,10 +201,10 @@ Route::group(['middleware' => ['auth', 'role:1']], function () {
     Route::post('/realisasi/tagihan-kelompok/process', [RealisasiTagihanKelompokController::class, 'processRealisasi'])->name('realisasi.tagihanKelompok.process');
 
     //Realisasi Musyarokah
-    Route::get('/realisasi-musyarakah', [RealisasiMusyarokahController::class, 'index']);
-    Route::get('/realisasi-musyarakah-get-kelompok', [RealisasiMusyarokahController::class, 'getSetKelompok']);
-    Route::get('/realisasi-musyarakah/getData', [RealisasiMusyarokahController::class, 'getData']);
-    Route::post('/proses-realisasi-musyarakah', [RealisasiMusyarokahController::class, 'realisasiMusyarokah']);
+    Route::get('/realisasi-musyarakah', [RealisasiMusyarokahController::class, 'index'])->name('realisasiMusyarakah.index');
+    Route::get('/realisasi-musyarakah-get-kelompok', [RealisasiMusyarokahController::class, 'getSetKelompok'])->name('realisasiMusyarakah.getKelompok');
+    Route::get('/realisasi-musyarakah/getData', [RealisasiMusyarokahController::class, 'getData'])->name('realisasiMusyarakah.getData');
+    Route::post('/proses-realisasi-musyarakah', [RealisasiMusyarokahController::class, 'realisasiMusyarokah'])->name('realisasiMusyarakah.proses');
 
     // setoran kerkelompok
     Route::get('/transaksi/setoran-perkelompok', [SetoranPerkelompokController::class, 'index']);

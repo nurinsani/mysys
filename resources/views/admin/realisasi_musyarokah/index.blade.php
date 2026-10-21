@@ -98,7 +98,7 @@
                 placeholder: 'Cari kode kelompok...',
                 allowClear: false,
                 ajax: {
-                    url: '/realisasi-musyarakah-get-kelompok',
+                    url: "{{ route('realisasiMusyarakah.getKelompok') }}",
                     dataType: 'json',
                     delay: 250,
                     data: function(params) {
@@ -144,7 +144,7 @@
                 $('#dataTable').html('<tr><td colspan="8">Memuat data...</td></tr>');
 
                 $.ajax({
-                    url: 'realisasi-musyarakah/getData',
+                    url: "{{ route('realisasiMusyarakah.getData') }}",
                     type: 'GET',
                     data: {
                         kode_kelompok: kodeKelompok,
@@ -216,7 +216,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: '/proses-realisasi-musyarakah',
+                            url: "{{ route('realisasiMusyarakah.proses') }}",
                             type: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
